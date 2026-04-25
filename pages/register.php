@@ -255,7 +255,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
 </head>
 <body>
 <div class="login">
-  <img src="../img/Background.jpg" alt="login image" class="login__img">
+  <img src="../img/Bac.jpg" alt="login image" class="login__img">
   <form action="register.php" method="post" class="login__form">
     <?php echo csrf_field(); ?>
     <h1 class="login__title">Register</h1>

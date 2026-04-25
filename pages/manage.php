@@ -556,7 +556,7 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
         body {
             margin: 0;
             font-family: "Poppins", sans-serif;
-            background: url(../img/Background.jpg) no-repeat center center fixed;
+            background: url(../img/Bac.jpg) no-repeat center center fixed;
             background-size: cover;
             color: white;
         }

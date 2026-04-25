@@ -32,12 +32,16 @@ session_start();
 
         body {
             font-family: "Poppins", sans-serif;
-            background: url(../img/Background.jpg) center/cover no-repeat;
+            background: url(../img/Bac.jpg) center/cover no-repeat;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
 
         .main {
             width: 100%;
-            height: 100vh;
+            min-height: 100vh;
+            flex: 1;
         }
 
         .navbar {
@@ -261,6 +265,39 @@ session_start();
             opacity: 0;
         }
 
+        .site-footer {
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 40px 20px;
+            text-align: center;
+            margin-top: auto;
+        }
+
+        .site-footer-links {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        .site-footer-links a {
+            color: #ff7200;
+            text-decoration: none;
+        }
+
+        .site-footer-social a {
+            margin: 0 10px;
+            color: #ff7200;
+        }
+
+        .site-footer-copy {
+            margin-top: 10px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
 
         @keyframes shine {
             0% {
@@ -286,9 +323,6 @@ session_start();
                     <li><a href="gallery.php">Gallery</a></li>
                     <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
                         <li><a href="manage.php">Manage</a></li>
-                    <?php endif; ?>
-                    <?php if (isset($_SESSION['username'])): ?>
-                        <li><a href="profile.php">Profile</a></li>
                     <?php endif; ?>
                     <li><a href="contact.php">Contact</a></li>
                     <li><a href="about.php">About</a></li>
@@ -340,31 +374,7 @@ session_start();
         </section>
 
     </div>
-    <footer
-        style="background-color: rgba(0, 0, 0, 0.9); color: white; padding: 40px 20px; text-align: center; margin-top: 100px;">
-        <div
-            style="display: flex; flex-wrap: wrap; justify-content: center; gap: 40px; margin-bottom: 20px; font-size: 16px;">
-            <a href="#" style="color: #ff7200; text-decoration: none;">Terms & Conditions</a>
-            <a href="#" style="color: #ff7200; text-decoration: none;">Privacy Policy</a>
-            <a href="contact.php" style="color: #ff7200; text-decoration: none;">Contact</a>
-            <a href="about.php" style="color: #ff7200; text-decoration: none;">About</a>
-        </div>
-
-        <div style="margin: 20px 0;">
-            <a href="https://facebook.com" target="_blank" style="margin: 0 10px; color: #ff7200;"><i
-                    class="fab fa-facebook-f"></i></a>
-            <a href="https://twitter.com" target="_blank" style="margin: 0 10px; color: #ff7200;"><i
-                    class="fab fa-twitter"></i></a>
-            <a href="https://instagram.com" target="_blank" style="margin: 0 10px; color: #ff7200;"><i
-                    class="fab fa-instagram"></i></a>
-            <a href="https://youtube.com" target="_blank" style="margin: 0 10px; color: #ff7200;"><i
-                    class="fab fa-youtube"></i></a>
-        </div>
-
-        <p style="margin-top: 10px; font-size: 14px; color: rgba(255, 255, 255, 0.6);">
-            &copy; <?php echo date("Y"); ?> U-Music. All rights reserved.
-        </p>
-    </footer>
+    <?php include __DIR__ . '/../includes/footer.php'; ?>
 
 
     <script>

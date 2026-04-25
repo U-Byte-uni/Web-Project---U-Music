@@ -123,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
 
     body {
       font-family: "Poppins", sans-serif;
-      background: url('../img/Background.jpg') no-repeat center center fixed;
+      background: url('../img/Bac.jpg') no-repeat center center fixed;
       background-size: cover;
       min-height: 100vh;
       color: #fff;
@@ -144,7 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
       bottom: 0;
       width: 80px;
       height: 100vh;
-      background: url('../img/Background.jpg') no-repeat center center fixed;
+      background: url('../img/Bac.jpg') no-repeat center center fixed;
       background-size: cover;
       backdrop-filter: blur(6px);
       transition: width 0.3s ease;
@@ -189,7 +189,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
       align-items: center;
       gap: 12px;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: color 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      padding: 8px 12px;
+      border-radius: 8px;
+      z-index: 0;
+    }
+
+    .sidebar-buttons button::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 114, 0, 0.2);
+      transform: translateX(-110%);
+      transition: transform 0.3s ease-in-out;
+      z-index: -1;
+    }
+
+    .sidebar-buttons button:hover::before {
+      transform: translateX(0);
     }
 
     .sidebar-buttons button i {
@@ -286,10 +305,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
       color: #fff;
       font-weight: bold;
       transition: 0.3s ease-in-out;
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      padding: 8px 12px;
+      border-radius: 8px;
+      z-index: 0;
+    }
+
+    .menu ul li a::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 114, 0, 0.2);
+      transform: translateX(-110%);
+      transition: transform 0.3s ease-in-out;
+      z-index: -1;
     }
 
     .menu ul li a:hover {
       color: #ff7200;
+    }
+
+    .menu ul li a:hover::before {
+      transform: translateX(0);
     }
 
     .logout {
@@ -382,22 +421,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
 
     .gallery-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 20px;
-      padding: 0 40px;
+      grid-template-columns: repeat(auto-fill, 260px);
+      gap: 15px;
+      padding: 0 20px;
+      justify-content: center;
+      justify-items: start;
     }
 
     .gallery-grid img {
       width: 100%;
-      height: 250px;
+      height: 100%;
       object-fit: cover;
-      border-radius: 10px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-      transition: transform 0.3s;
-    }
-
-    .gallery-grid img:hover {
-      transform: scale(1.05);
+      border-radius: 8px;
+      display: block;
     }
 
     .sidebar-tab {
@@ -419,25 +455,144 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
 
     .song-item {
       background-color: rgba(255, 255, 255, 0.08);
-      padding: 12px;
-      border-radius: 10px;
-      text-align: center;
+      padding: 10px;
+      border-radius: 12px;
+      text-align: left;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
       transition: transform 0.3s, box-shadow 0.3s;
+      width: 260px;
+      height: 280px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      backdrop-filter: blur(6px);
+      overflow: hidden;
     }
 
-    .song-item img {
-      width: 90%;
-      height: 120px;
+    .song-item:hover {
+      transform: translateY(-8px);
+    }
+
+    .song-thumb {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 12px 12px 0 0;
+      overflow: hidden;
+    }
+
+    .song-thumb img {
+      width: 100%;
+      height: 100%;
       object-fit: cover;
-      border-radius: 8px;
-      margin-bottom: 8px;
+      border-radius: 12px 12px 0 0;
+      transition: filter 0.3s ease;
+    }
+
+    .song-item:hover .song-thumb img {
+      filter: brightness(1.1);
+    }
+
+    .play-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .play-overlay i {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255, 114, 0, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ff7200;
+      font-size: 20px;
+    }
+
+    .song-item:hover .play-overlay,
+    .song-item:focus-within .play-overlay {
+      opacity: 1;
+    }
+
+    .song-details {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      padding: 0 2px 2px;
+      gap: 6px;
+      min-width: 0;
     }
 
     .song-item audio {
       width: 100%;
-      height: 30px;
-      margin: 6px 0;
+      height: 28px;
+      margin: 0;
+    }
+
+    .waveform {
+      display: flex;
+      justify-content: flex-start;
+      align-items: flex-end;
+      gap: 4px;
+      height: 16px;
+      margin: 0;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .waveform span {
+      width: 4px;
+      height: 5px;
+      background: #ff7200;
+      border-radius: 2px;
+      animation: quiet-pulse 0.9s ease-in-out infinite;
+      animation-play-state: paused;
+    }
+
+    .waveform span:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    .waveform span:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+
+    .waveform span:nth-child(4) {
+      animation-delay: 0.45s;
+    }
+
+    .song-item:hover .waveform,
+    .song-item:focus-within .waveform,
+    .song-item.is-active .waveform {
+      opacity: 1;
+    }
+
+    .song-item:hover .waveform span,
+    .song-item:focus-within .waveform span,
+    .song-item.is-active .waveform span {
+      animation-play-state: running;
+    }
+
+    @keyframes quiet-pulse {
+      0% {
+        height: 5px;
+      }
+
+      100% {
+        height: 15px;
+      }
     }
 
 
@@ -445,8 +600,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
       font-size: 18px;
       color: #ffae42;
       font-weight: bold;
-      margin-top: 8px;
+      margin-top: 0;
       text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     #history table {
@@ -501,7 +659,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 10px;
+      margin-top: auto;
+      gap: 8px;
     }
 
     .song-info {
@@ -509,6 +668,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
       flex-direction: column;
       align-items: flex-start;
       text-align: left;
+      min-width: 0;
+      flex: 1;
     }
 
     .song-title {
@@ -517,12 +678,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
       font-weight: bold;
       margin: 0;
       text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .song-artist {
       font-size: 14px;
       color: #eee;
       margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .fav-icon {
@@ -624,9 +791,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
             <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
               <li><a href="manage.php">Manage</a></li>
             <?php endif; ?>
-            <?php if (isset($_SESSION['username'])): ?>
-              <li><a href="profile.php">Profile</a></li>
-            <?php endif; ?>
             <li><a href="contact.php">Contact</a></li>
             <li><a href="about.php">About</a></li>
           </ul>
@@ -689,18 +853,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
 
               echo <<<HTML
                     <div class="song-item">
-                      <img src="{$image_path}" alt="Song Cover">
-                      <audio controls data-song-id="{$song_id}">
-                        <source src="{$audio_src}" type="audio/mpeg">
-                        Your browser does not support the audio element.
-                      </audio>
-                      <div class="song-meta">
-                        <div class="song-info">
-                          <p class="song-title">{$song_name}</p>
-                          <p class="song-artist">{$artist}</p>
+                      <div class="song-thumb">
+                        <img src="{$image_path}" alt="Song Cover">
+                        <div class="play-overlay" aria-hidden="true">
+                          <i class="fas fa-play"></i>
                         </div>
-                        <div class="fav-icon" data-song-id="{$song_id}">
-                          <i class="fas fa-heart"></i>
+                      </div>
+                      <div class="song-details">
+                        <audio controls data-song-id="{$song_id}">
+                          <source src="{$audio_src}" type="audio/mpeg">
+                          Your browser does not support the audio element.
+                        </audio>
+                        <div class="waveform" aria-hidden="true">
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                        </div>
+                        <div class="song-meta">
+                          <div class="song-info">
+                            <p class="song-title">{$song_name}</p>
+                            <p class="song-artist">{$artist}</p>
+                          </div>
+                          <div class="fav-icon" data-song-id="{$song_id}">
+                            <i class="fas fa-heart"></i>
+                          </div>
                         </div>
                       </div>
                     </div>

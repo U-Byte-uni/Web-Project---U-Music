@@ -270,7 +270,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <body>
 
   <div class="login">
-    <img src="img/Background.jpg" alt="login image" class="login__img" />
+    <img src="img/Bac.jpg" alt="login image" class="login__img" />
 
     <form method="post" class="login__form">
       <?php echo csrf_field(); ?>

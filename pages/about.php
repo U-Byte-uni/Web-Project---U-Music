@@ -28,15 +28,19 @@ session_start();
 
         body {
             font-family: 'Poppins', sans-serif;
-            background: url(../img/Background.jpg) center/cover no-repeat fixed;
+            background: url(../img/Bac.jpg) center/cover no-repeat fixed;
             color: #fff;
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 20px;
+            flex: 1;
+            width: 100%;
         }
 
         /* ── Navbar (identical to Contact) ── */
@@ -228,6 +232,39 @@ session_start();
             0%   { background-position: 0% center; }
             100% { background-position: 200% center; }
         }
+
+        .site-footer {
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 40px 20px;
+            text-align: center;
+            margin-top: auto;
+        }
+
+        .site-footer-links {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        .site-footer-links a {
+            color: #ff7200;
+            text-decoration: none;
+        }
+
+        .site-footer-social a {
+            margin: 0 10px;
+            color: #ff7200;
+        }
+
+        .site-footer-copy {
+            margin-top: 10px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+        }
     </style>
 </head>
 
@@ -242,9 +279,6 @@ session_start();
                     <li><a href="gallery.php">Gallery</a></li>
                     <?php if (isset($_SESSION['username']) && $_SESSION['role'] === 'admin'): ?>
                         <li><a href="manage.php">Manage</a></li>
-                    <?php endif; ?>
-                    <?php if (isset($_SESSION['username'])): ?>
-                        <li><a href="profile.php">Profile</a></li>
                     <?php endif; ?>
                     <li><a href="contact.php">Contact</a></li>
                     <li><a href="about.php">About</a></li>
@@ -284,6 +318,8 @@ session_start();
 
         </div>
     </div>
+
+    <?php include __DIR__ . '/../includes/footer.php'; ?>
 
 </body>
 

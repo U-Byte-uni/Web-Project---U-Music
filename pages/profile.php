@@ -140,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     body {
       font-family: 'Poppins', sans-serif;
-      background: url(../img/Background.jpg) center/cover no-repeat fixed;
+      background: url(../img/Bac.jpg) center/cover no-repeat fixed;
       color: #fff;
       min-height: 100vh;
     }
@@ -342,7 +342,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
             <li><a href="manage.php">Manage</a></li>
           <?php endif; ?>
-          <li><a href="profile.php">Profile</a></li>
           <li><a href="contact.php">Contact</a></li>
           <li><a href="about.php">About</a></li>
         </ul>
