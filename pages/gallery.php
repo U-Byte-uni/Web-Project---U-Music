@@ -1,12 +1,17 @@
 <?php
 session_start();
 require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/csrf.php';
 
 $searchTerm = '';
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['search'])) {
   $searchTerm = trim($_GET['search']);
 }
 
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  csrf_verify();
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['record_history'])) {
   if (isset($_SESSION['user_id'], $_POST['song_id'])) {
@@ -619,12 +624,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
             <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
               <li><a href="manage.php">Manage</a></li>
             <?php endif; ?>
+            <?php if (isset($_SESSION['username'])): ?>
+              <li><a href="profile.php">Profile</a></li>
+            <?php endif; ?>
             <li><a href="contact.php">Contact</a></li>
             <li><a href="about.php">About</a></li>
           </ul>
         </div>
         <div class="logout">
-          <a href="/" class="logout-btn" title="Logout">
+          <a href="/Project/pages/logout.php" class="logout-btn" title="Logout">
             <img src="../img/logout.png" alt="Logout">
           </a>
         </div>
@@ -788,11 +796,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
   <!-- Scripts -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+      const csrfToken = "<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>";
       const postForm = data =>
         fetch(location.href, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams(data)
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: new URLSearchParams({ ...data, csrf_token: csrfToken })
         }).then(res => res.text());
 
       const setupAudioTracking = () => {

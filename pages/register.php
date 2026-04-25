@@ -1,54 +1,78 @@
 <?php
-/* Show errors while developing — remove in production */
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
 error_reporting(E_ALL);
 require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/csrf.php';
+
+$form_error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST'
-    && isset($_POST['username'], $_POST['email'], $_POST['password'])) {
+  && isset($_POST['username'], $_POST['email'], $_POST['password'])) {
 
-    $username = trim($_POST['username']);
-    $email    = trim($_POST['email']);
-    $password = trim($_POST['password']);
+  csrf_verify();
 
-    if ($username !== '' && $email !== '' && $password !== '') {
+  $username = trim($_POST['username']);
+  $email    = trim($_POST['email']);
+  $password = trim($_POST['password']);
+  $errors = [];
+
+  if ($username === '') {
+    $errors[] = 'Username is required.';
+  } elseif (strlen($username) < 3 || strlen($username) > 50) {
+    $errors[] = 'Username must be between 3 and 50 characters.';
+  }
+
+  if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    $errors[] = 'A valid email address is required.';
+  } elseif (strlen($email) > 255) {
+    $errors[] = 'Email is too long.';
+  }
+
+  if ($password === '') {
+    $errors[] = 'Password is required.';
+  } elseif (strlen($password) < 6 || strlen($password) > 255) {
+    $errors[] = 'Password must be between 6 and 255 characters.';
+  }
+
+  if (!empty($errors)) {
+    $form_error = implode(' ', $errors);
+  } else {
+    try {
+      $stmt = $mysqli->prepare(
+        'SELECT 1 FROM users WHERE username = ? LIMIT 1'
+      );
+      $stmt->bind_param('s', $username);
+      $stmt->execute();
+      $stmt->store_result();
+
+      if ($stmt->num_rows) {
+        $form_error = 'Username already in use. Please choose another one.';
+      } else {
+        $role = ($username === 'admin') ? 'admin' : 'user';
+        $password_hash = password_hash($password, PASSWORD_DEFAULT);
 
         $stmt = $mysqli->prepare(
-            'SELECT 1 FROM users WHERE username = ? LIMIT 1'
+          'INSERT INTO users (username, pwd, email, role)
+           VALUES (?, ?, ?, ?)'
         );
-        $stmt->bind_param('s', $username);
-        $stmt->execute();
-        $stmt->store_result();
+        $stmt->bind_param('ssss', $username, $password_hash, $email, $role);
 
-        if ($stmt->num_rows) {
-            echo "<script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    document.getElementById('username-error').style.display = 'block';
-                });
-            </script>";
+        if ($stmt->execute()) {
+          echo "<script>
+            alert('Registration successful!');
+            window.location.href = 'wellcome.php';
+          </script>";
         } else {
-            $role = ($username === 'admin') ? 'admin' : 'user';
-
-            $stmt = $mysqli->prepare(
-              'INSERT INTO users (username, pwd, email, role)
-               VALUES (?, ?, ?, ?)'
-            );
-            $stmt->bind_param('ssss', $username, $password, $email, $role);
-
-            if ($stmt->execute()) {
-                echo "<script>
-                    alert('Registration successful!');
-                    window.location.href = 'wellcome.php';
-                </script>";
-            } else {
-                echo "<script>alert('Error: " . $stmt->error . "');</script>";
-            }
+          $form_error = 'Registration failed. Please try again.';
         }
+      }
 
-        $stmt->close();
-    } else {
-        echo "<script>alert('Please fill in all fields.');</script>";
+      $stmt->close();
+    } catch (mysqli_sql_exception $e) {
+      error_log('Registration error: ' . $e->getMessage());
+      $form_error = 'Registration is temporarily unavailable. Please try again.';
     }
+  }
 }
 ?>
 
@@ -233,9 +257,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
 <div class="login">
   <img src="../img/Background.jpg" alt="login image" class="login__img">
   <form action="register.php" method="post" class="login__form">
+    <?php echo csrf_field(); ?>
     <h1 class="login__title">Register</h1>
     <div class="login__content">
       <p id="username-error" class="error-message">Username already in use. Please choose another one.</p>
+      <?php if ($form_error !== ''): ?>
+        <div class="error-message" style="display: block;">
+          <?php echo htmlspecialchars($form_error); ?>
+        </div>
+      <?php endif; ?>
 
       <div class="login__box">
         <div class="login__box-input">

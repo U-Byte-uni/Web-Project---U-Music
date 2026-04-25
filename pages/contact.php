@@ -1,5 +1,69 @@
 <?php
 session_start();
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/csrf.php';
+
+$form_status = '';
+$form_status_class = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verify();
+
+    $name = trim($_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $message = trim($_POST['message'] ?? '');
+    $errors = [];
+
+    if ($name === '') {
+        $errors[] = 'Name is required.';
+    } elseif (strlen($name) < 2 || strlen($name) > 100) {
+        $errors[] = 'Name must be between 2 and 100 characters.';
+    }
+
+    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = 'A valid email address is required.';
+    } elseif (strlen($email) > 255) {
+        $errors[] = 'Email is too long.';
+    }
+
+    if ($message === '') {
+        $errors[] = 'Message is required.';
+    } elseif (strlen($message) < 10) {
+        $errors[] = 'Message must be at least 10 characters.';
+    } elseif (strlen($message) > 1000) {
+        $errors[] = 'Message must be 1000 characters or less.';
+    }
+
+    if (empty($errors)) {
+        try {
+            $stmt = $mysqli->prepare(
+                'INSERT INTO contact_messages (name, email, message) VALUES (?, ?, ?)'
+            );
+
+            if ($stmt) {
+                $stmt->bind_param('sss', $name, $email, $message);
+                if ($stmt->execute()) {
+                    $form_status = 'Message sent successfully.';
+                    $form_status_class = 'success';
+                } else {
+                    $form_status = 'Failed to send message. Please try again.';
+                    $form_status_class = 'error';
+                }
+                $stmt->close();
+            } else {
+                $form_status = 'Failed to send message. Please try again.';
+                $form_status_class = 'error';
+            }
+        } catch (mysqli_sql_exception $e) {
+            error_log('Contact message error: ' . $e->getMessage());
+            $form_status = 'Failed to send message. Please try again.';
+            $form_status_class = 'error';
+        }
+    } else {
+        $form_status = implode(' ', $errors);
+        $form_status_class = 'error';
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -284,11 +348,14 @@ session_start();
                     <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
                         <li><a href="manage.php">Manage</a></li>
                     <?php endif; ?>
+                    <?php if (isset($_SESSION['username'])): ?>
+                        <li><a href="profile.php">Profile</a></li>
+                    <?php endif; ?>
                     <li><a href="contact.php">Contact</a></li>
                     <li><a href="about.php">About</a></li>
                 </ul>
             </div>
-            <a href="/" class="logout-btn" title="Logout">
+            <a href="/Project/pages/logout.php" class="logout-btn" title="Logout">
                 <img src="../img/logout.png" alt="Logout">
             </a>
         </div>
@@ -296,7 +363,13 @@ session_start();
         <div class="contact-wrapper">
             <div class="contact-container">
                 <h1>Contact Us</h1>
-                <form class="contact-form" action="#" method="POST">
+                <form class="contact-form" action="contact.php" method="POST">
+                    <?php echo csrf_field(); ?>
+                    <?php if ($form_status !== ''): ?>
+                        <div class="form-status <?php echo htmlspecialchars($form_status_class); ?>">
+                            <?php echo htmlspecialchars($form_status); ?>
+                        </div>
+                    <?php endif; ?>
                     <input type="text" name="name" placeholder="Your Name" required>
                     <input type="email" name="email" placeholder="Your Email" required>
                     <textarea name="message" rows="6" placeholder="Your Message" required></textarea>

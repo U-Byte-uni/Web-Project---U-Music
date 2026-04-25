@@ -287,13 +287,16 @@ session_start();
                     <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
                         <li><a href="manage.php">Manage</a></li>
                     <?php endif; ?>
+                    <?php if (isset($_SESSION['username'])): ?>
+                        <li><a href="profile.php">Profile</a></li>
+                    <?php endif; ?>
                     <li><a href="contact.php">Contact</a></li>
                     <li><a href="about.php">About</a></li>
                 </ul>
             </div>
 
             <div class="logout">
-                <a href="/" class="logout-btn" title="Logout">
+                <a href="/Project/pages/logout.php" class="logout-btn" title="Logout">
                     <img src="../img/logout.png" alt="Logout">
                 </a>
             </div>

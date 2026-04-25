@@ -1,41 +1,81 @@
 <?php
 session_start();
 require_once __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/includes/csrf.php';
 
 $error = "";
 $username_input = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-  $username_input = $_POST['username'];
-  $password = $_POST['password'];
+  csrf_verify();
 
-  $stmt = $mysqli->prepare("SELECT * FROM users WHERE username = ? AND pwd = ?");
-  $stmt->bind_param("ss", $username_input, $password);
-  $stmt->execute();
-  $result = $stmt->get_result();
+  $username_input = trim($_POST['username'] ?? '');
+  $password = $_POST['password'] ?? '';
 
-  if ($result->num_rows == 1) {
-    $user = $result->fetch_assoc();
-
-  
-    $_SESSION['user_id'] = $user['user_id'];
-    $_SESSION['username'] = $user['username'];
-    $_SESSION['role'] = $user['role']; 
-
-    if ($_SESSION['role'] === 'admin') {
-      
-      echo "<script>window.location.href='pages/manage.php';</script>";
-    } else {
-      
-      echo "<script>window.location.href='pages/wellcome.php';</script>";
-    }
-    exit;
+  if ($username_input === '' || $password === '') {
+    $error = "Please enter your username and password.";
+  } elseif (strlen($username_input) > 50) {
+    $error = "Username is too long.";
+  } elseif (strlen($password) > 255) {
+    $error = "Password is too long.";
   } else {
-    $error = "Invalid username or password. Please try again.";
-  }
+    try {
+      $stmt = $mysqli->prepare("SELECT * FROM users WHERE username = ? LIMIT 1");
+      $stmt->bind_param("s", $username_input);
+      $stmt->execute();
+      $result = $stmt->get_result();
 
-  $stmt->close();
+      if ($result->num_rows == 1) {
+        $user = $result->fetch_assoc();
+
+        $stored_pwd = $user['pwd'];
+        $hash_info = password_get_info($stored_pwd);
+        $is_hashed = $hash_info['algo'] !== 0;
+        $is_valid = false;
+
+        if ($is_hashed) {
+          $is_valid = password_verify($password, $stored_pwd);
+        } else {
+          $is_valid = hash_equals($stored_pwd, $password);
+
+          if ($is_valid) {
+            $new_hash = password_hash($password, PASSWORD_DEFAULT);
+            if ($new_hash !== false) {
+              $update = $mysqli->prepare("UPDATE users SET pwd = ? WHERE user_id = ?");
+              $update->bind_param("si", $new_hash, $user['user_id']);
+              $update->execute();
+              $update->close();
+              $stored_pwd = $new_hash;
+            }
+          }
+        }
+
+        if ($is_valid) {
+          session_regenerate_id(true);
+          $_SESSION['user_id'] = $user['user_id'];
+          $_SESSION['username'] = $user['username'];
+          $_SESSION['role'] = $user['role'];
+
+          if ($_SESSION['role'] === 'admin') {
+            echo "<script>window.location.href='pages/manage.php';</script>";
+          } else {
+            echo "<script>window.location.href='pages/wellcome.php';</script>";
+          }
+          exit;
+        }
+
+        $error = "Invalid username or password. Please try again.";
+      } else {
+        $error = "Invalid username or password. Please try again.";
+      }
+
+      $stmt->close();
+    } catch (mysqli_sql_exception $e) {
+      error_log('Login error: ' . $e->getMessage());
+      $error = "Login is temporarily unavailable. Please try again.";
+    }
+  }
 }
 ?>
 
@@ -233,10 +273,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <img src="img/Background.jpg" alt="login image" class="login__img" />
 
     <form method="post" class="login__form">
+      <?php echo csrf_field(); ?>
       <h1 class="login__title">Login</h1>
 
       <?php if (!empty($error)) {
-        echo "<div class='error-message'>$error</div>";
+        echo "<div class='error-message'>" . htmlspecialchars($error) . "</div>";
       } ?>
 
       <div class="login__content">

@@ -1,22 +1,42 @@
 <?php
-session_start();
 require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/csrf.php';
 
-if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
-    echo "<script>
-        alert('Access denied: Only admin can access the Manage page.');
-        window.location.href = 'home.php';
-    </script>";
-    exit();
+require_admin();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verify();
+}
+
+$valid_roles = ['admin', 'user'];
+$allowed_user_columns = ['user_id', 'username', 'pwd', 'email', 'register_date', 'role'];
+$allowed_song_columns = ['song_id', 's_name', 'artist', 'added_at', 'path'];
+$allowed_fav_columns = ['fav_id', 'user_id', 'song_id', 'added_at'];
+$allowed_history_columns = ['history_id', 'user_id', 'song_id', 'listened_at'];
+$allowed_tables = ['users', 'songs', 'favourite', 'history'];
+
+$users_error = '';
+$songs_error = '';
+
+function is_valid_length(string $value, int $min, int $max): bool
+{
+    $len = strlen($value);
+    return $len >= $min && $len <= $max;
 }
 
 $users = [];
 if (isset($_GET['action']) && $_GET['action'] === 'display') {
-    $sql = "SELECT user_id, username, pwd, email, register_date, role FROM users";
-    $result = $mysqli->query($sql);
+    try {
+        $sql = "SELECT user_id, username, pwd, email, register_date, role FROM users";
+        $result = $mysqli->query($sql);
 
-    while ($row = $result->fetch_assoc()) {
-        $users[] = $row;
+        while ($row = $result->fetch_assoc()) {
+            $users[] = $row;
+        }
+    } catch (mysqli_sql_exception $e) {
+        error_log('Load users error: ' . $e->getMessage());
+        $users_error = 'Unable to load users right now.';
     }
 }
 
@@ -24,28 +44,75 @@ if (isset($_POST['add_user'])) {
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);
     $password = trim($_POST['password']);
-    $role = $_POST['role'];
+    $role = $_POST['role'] ?? '';
+    $errors = [];
 
-    $sql = "INSERT INTO users (username, email, pwd, role) VALUES ('$username', '$email', '$password', '$role')";
-    if ($mysqli->query($sql)) {
-        echo "<script>alert('User added successfully!'); location.href = location.href;</script>";
+    if (!is_valid_length($username, 3, 50)) {
+        $errors[] = 'Username must be between 3 and 50 characters.';
+    }
+
+    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 255) {
+        $errors[] = 'A valid email address is required.';
+    }
+
+    if (!is_valid_length($password, 6, 255)) {
+        $errors[] = 'Password must be between 6 and 255 characters.';
+    }
+
+    if (!in_array($role, $valid_roles, true)) {
+        $errors[] = 'Invalid role selection.';
+    }
+
+    if (!empty($errors)) {
+        echo "<script>alert('" . addslashes(implode(' ', $errors)) . "'); location.href = location.href;</script>";
     } else {
-        echo "<script>alert('Failed to add user.'); location.href = location.href;</script>";
+        try {
+            $stmt = $mysqli->prepare("INSERT INTO users (username, email, pwd, role) VALUES (?, ?, ?, ?)");
+            if ($stmt) {
+                $stmt->bind_param("ssss", $username, $email, $password, $role);
+                if ($stmt->execute()) {
+                    echo "<script>alert('User added successfully!'); location.href = location.href;</script>";
+                } else {
+                    echo "<script>alert('Failed to add user. Please try again.'); location.href = location.href;</script>";
+                }
+                $stmt->close();
+            } else {
+                echo "<script>alert('Failed to add user. Please try again.'); location.href = location.href;</script>";
+            }
+        } catch (mysqli_sql_exception $e) {
+            error_log('Add user error: ' . $e->getMessage());
+            echo "<script>alert('Failed to add user. Please try again.'); location.href = location.href;</script>";
+        }
     }
 }
 
 if (isset($_POST['delete_user'])) {
     $usernameToDelete = trim($_POST['delete_username']);
 
-    $sql = "DELETE FROM users WHERE username = '$usernameToDelete'";
-    if ($mysqli->query($sql)) {
-        if ($mysqli->affected_rows > 0) {
-            echo "<script>alert('User deleted successfully!'); location.href = location.href;</script>";
-        } else {
-            echo "<script>alert('User not found.'); location.href = location.href;</script>";
-        }
+    if (!is_valid_length($usernameToDelete, 3, 50)) {
+        echo "<script>alert('Please enter a valid username.'); location.href = location.href;</script>";
     } else {
-        echo "<script>alert('Failed to delete user.'); location.href = location.href;</script>";
+        try {
+            $stmt = $mysqli->prepare("DELETE FROM users WHERE username = ?");
+            if ($stmt) {
+                $stmt->bind_param("s", $usernameToDelete);
+                if ($stmt->execute()) {
+                    if ($stmt->affected_rows > 0) {
+                        echo "<script>alert('User deleted successfully!'); location.href = location.href;</script>";
+                    } else {
+                        echo "<script>alert('User not found.'); location.href = location.href;</script>";
+                    }
+                } else {
+                    echo "<script>alert('Failed to delete user. Please try again.'); location.href = location.href;</script>";
+                }
+                $stmt->close();
+            } else {
+                echo "<script>alert('Failed to delete user. Please try again.'); location.href = location.href;</script>";
+            }
+        } catch (mysqli_sql_exception $e) {
+            error_log('Delete user error: ' . $e->getMessage());
+            echo "<script>alert('Failed to delete user. Please try again.'); location.href = location.href;</script>";
+        }
     }
 }
 
@@ -54,48 +121,94 @@ if (isset($_POST['edit_user'])) {
     $new_username = trim($_POST['new_username']);
     $new_email = trim($_POST['new_email']);
     $new_password = trim($_POST['new_password']);
-    $new_role = $_POST['new_role'];
+    $new_role = $_POST['new_role'] ?? '';
+    $errors = [];
 
-    $sql = "UPDATE users SET username='$new_username', email='$new_email', pwd='$new_password', role='$new_role' WHERE username='$old_username'";
-    if ($mysqli->query($sql)) {
-        if ($mysqli->affected_rows > 0) {
-            echo "<script>alert('User updated successfully!'); location.href = location.href;</script>";
-        } else {
-            echo "<script>alert('No changes or user not found.'); location.href = location.href;</script>";
-        }
+    if (!is_valid_length($old_username, 3, 50)) {
+        $errors[] = 'Current username is invalid.';
+    }
+
+    if (!is_valid_length($new_username, 3, 50)) {
+        $errors[] = 'New username must be between 3 and 50 characters.';
+    }
+
+    if ($new_email === '' || !filter_var($new_email, FILTER_VALIDATE_EMAIL) || strlen($new_email) > 255) {
+        $errors[] = 'A valid email address is required.';
+    }
+
+    if (!is_valid_length($new_password, 6, 255)) {
+        $errors[] = 'Password must be between 6 and 255 characters.';
+    }
+
+    if (!in_array($new_role, $valid_roles, true)) {
+        $errors[] = 'Invalid role selection.';
+    }
+
+    if (!empty($errors)) {
+        echo "<script>alert('" . addslashes(implode(' ', $errors)) . "'); location.href = location.href;</script>";
     } else {
-        echo "<script>alert('Failed to update user.'); location.href = location.href;</script>";
+        try {
+            $stmt = $mysqli->prepare("UPDATE users SET username = ?, email = ?, pwd = ?, role = ? WHERE username = ?");
+            if ($stmt) {
+                $stmt->bind_param("sssss", $new_username, $new_email, $new_password, $new_role, $old_username);
+                if ($stmt->execute()) {
+                    if ($stmt->affected_rows > 0) {
+                        echo "<script>alert('User updated successfully!'); location.href = location.href;</script>";
+                    } else {
+                        echo "<script>alert('No changes or user not found.'); location.href = location.href;</script>";
+                    }
+                } else {
+                    echo "<script>alert('Failed to update user. Please try again.'); location.href = location.href;</script>";
+                }
+                $stmt->close();
+            } else {
+                echo "<script>alert('Failed to update user. Please try again.'); location.href = location.href;</script>";
+            }
+        } catch (mysqli_sql_exception $e) {
+            error_log('Edit user error: ' . $e->getMessage());
+            echo "<script>alert('Failed to update user. Please try again.'); location.href = location.href;</script>";
+        }
     }
 }
 if (isset($_POST['index_users']) && isset($_POST['columns'])) {
     session_start(); // Make sure this is at the top of your file
 
-    $columns = $_POST['columns'];
+    $columns = array_values(array_intersect($_POST['columns'], $allowed_user_columns));
     $indexed = [];
 
-    foreach ($columns as $column) {
-        $column = $mysqli->real_escape_string($column);
-        $index_name = "idx_users_" . $column;
-
-        $check = $mysqli->prepare("SHOW INDEX FROM users WHERE Key_name = ?");
-        $check->bind_param("s", $index_name);
-        $check->execute();
-        $result = $check->get_result();
-
-        if ($result->num_rows === 0) {
-            $sql = "CREATE INDEX `$index_name` ON users(`$column`)";
-            if ($mysqli->query($sql)) {
-                $indexed[] = $column;
-            }
-        }
-
-        $check->close();
+    if (empty($columns)) {
+        $_SESSION['indexing_msg'] = 'No valid columns selected.';
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit;
     }
 
-    if (!empty($indexed)) {
-        $_SESSION['indexing_msg'] = 'Indexed columns: ' . implode(", ", $indexed);
-    } else {
-        $_SESSION['indexing_msg'] = 'All selected columns were already indexed.';
+    try {
+        foreach ($columns as $column) {
+            $index_name = "idx_users_" . $column;
+
+            $check = $mysqli->prepare("SHOW INDEX FROM users WHERE Key_name = ?");
+            $check->bind_param("s", $index_name);
+            $check->execute();
+            $result = $check->get_result();
+
+            if ($result->num_rows === 0) {
+                $sql = "CREATE INDEX `$index_name` ON users(`$column`)";
+                if ($mysqli->query($sql)) {
+                    $indexed[] = $column;
+                }
+            }
+
+            $check->close();
+        }
+
+        if (!empty($indexed)) {
+            $_SESSION['indexing_msg'] = 'Indexed columns: ' . implode(", ", $indexed);
+        } else {
+            $_SESSION['indexing_msg'] = 'All selected columns were already indexed.';
+        }
+    } catch (mysqli_sql_exception $e) {
+        error_log('Index users error: ' . $e->getMessage());
+        $_SESSION['indexing_msg'] = 'Indexing failed. Please try again.';
     }
 
     header("Location: " . $_SERVER['PHP_SELF']);
@@ -109,27 +222,53 @@ if (isset($_POST['add_song'])) {
     $artist = trim($_POST['artist']);
     $path = trim($_POST['path']);
 
-    $s_name = $mysqli->real_escape_string($s_name);
-    $artist = $mysqli->real_escape_string($artist);
-    $path = $mysqli->real_escape_string($path);
+    $errors = [];
+    if (!is_valid_length($s_name, 1, 100)) {
+        $errors[] = 'Song name must be between 1 and 100 characters.';
+    }
+    if (!is_valid_length($artist, 1, 100)) {
+        $errors[] = 'Artist must be between 1 and 100 characters.';
+    }
+    if (!is_valid_length($path, 1, 255)) {
+        $errors[] = 'Path must be between 1 and 255 characters.';
+    }
 
-    $sql = "INSERT INTO songs (s_name, artist, path) VALUES ('$s_name', '$artist', '$path')";
-
-    if ($mysqli->query($sql)) {
-        echo "<script>alert('Song added successfully!'); location.href = location.href;</script>";
+    if (!empty($errors)) {
+        echo "<script>alert('" . addslashes(implode(' ', $errors)) . "'); location.href = location.href;</script>";
     } else {
-        echo "<script>alert('Failed to add song.'); location.href = location.href;</script>";
+        try {
+            $stmt = $mysqli->prepare("INSERT INTO songs (s_name, artist, path) VALUES (?, ?, ?)");
+            if ($stmt) {
+                $stmt->bind_param("sss", $s_name, $artist, $path);
+                if ($stmt->execute()) {
+                    echo "<script>alert('Song added successfully!'); location.href = location.href;</script>";
+                } else {
+                    echo "<script>alert('Failed to add song. Please try again.'); location.href = location.href;</script>";
+                }
+                $stmt->close();
+            } else {
+                echo "<script>alert('Failed to add song. Please try again.'); location.href = location.href;</script>";
+            }
+        } catch (mysqli_sql_exception $e) {
+            error_log('Add song error: ' . $e->getMessage());
+            echo "<script>alert('Failed to add song. Please try again.'); location.href = location.href;</script>";
+        }
     }
 }
 
 
 $songs = [];
 if (isset($_GET['action']) && $_GET['action'] === 'display' && $_GET['tab'] === 'songs') {
-    $sql = "SELECT song_id, s_name, artist, added_at, path FROM songs";
-    $result = $mysqli->query($sql);
+    try {
+        $sql = "SELECT song_id, s_name, artist, added_at, path FROM songs";
+        $result = $mysqli->query($sql);
 
-    while ($row = $result->fetch_assoc()) {
-        $songs[] = $row;
+        while ($row = $result->fetch_assoc()) {
+            $songs[] = $row;
+        }
+    } catch (mysqli_sql_exception $e) {
+        error_log('Load songs error: ' . $e->getMessage());
+        $songs_error = 'Unable to load songs right now.';
     }
 }
 
@@ -139,30 +278,97 @@ if (isset($_POST['edit_song'])) {
     $new_artist = trim($_POST['new_artist']);
     $new_path = trim($_POST['new_path']);
 
-    $sql = "UPDATE songs SET s_name='$new_s_name', artist='$new_artist', path='$new_path' WHERE s_name='$old_song_id'";
-    if ($mysqli->query($sql)) {
-        if ($mysqli->affected_rows > 0) {
-            echo "<script>alert('Song updated successfully!'); location.href = location.href;</script>";
-        } else {
-            echo "<script>alert('No changes or song not found.'); location.href = location.href;</script>";
-        }
+    $errors = [];
+    if (!is_valid_length($new_s_name, 1, 100)) {
+        $errors[] = 'Song name must be between 1 and 100 characters.';
+    }
+    if (!is_valid_length($new_artist, 1, 100)) {
+        $errors[] = 'Artist must be between 1 and 100 characters.';
+    }
+    if (!is_valid_length($new_path, 1, 255)) {
+        $errors[] = 'Path must be between 1 and 255 characters.';
+    }
+
+    $song_id = filter_var($old_song_id, FILTER_VALIDATE_INT, ["options" => ["min_range" => 1]]);
+    if ($song_id === false && !is_valid_length($old_song_id, 1, 100)) {
+        $errors[] = 'Please enter a valid song identifier.';
+    }
+
+    if (!empty($errors)) {
+        echo "<script>alert('" . addslashes(implode(' ', $errors)) . "'); location.href = location.href;</script>";
     } else {
-        echo "<script>alert('Failed to update song.'); location.href = location.href;</script>";
+        try {
+            if ($song_id !== false) {
+                $stmt = $mysqli->prepare("UPDATE songs SET s_name = ?, artist = ?, path = ? WHERE song_id = ?");
+                if ($stmt) {
+                    $stmt->bind_param("sssi", $new_s_name, $new_artist, $new_path, $song_id);
+                }
+            } else {
+                $stmt = $mysqli->prepare("UPDATE songs SET s_name = ?, artist = ?, path = ? WHERE s_name = ?");
+                if ($stmt) {
+                    $stmt->bind_param("ssss", $new_s_name, $new_artist, $new_path, $old_song_id);
+                }
+            }
+
+            if ($stmt) {
+                if ($stmt->execute()) {
+                    if ($stmt->affected_rows > 0) {
+                        echo "<script>alert('Song updated successfully!'); location.href = location.href;</script>";
+                    } else {
+                        echo "<script>alert('No changes or song not found.'); location.href = location.href;</script>";
+                    }
+                } else {
+                    echo "<script>alert('Failed to update song. Please try again.'); location.href = location.href;</script>";
+                }
+                $stmt->close();
+            } else {
+                echo "<script>alert('Failed to update song. Please try again.'); location.href = location.href;</script>";
+            }
+        } catch (mysqli_sql_exception $e) {
+            error_log('Edit song error: ' . $e->getMessage());
+            echo "<script>alert('Failed to update song. Please try again.'); location.href = location.href;</script>";
+        }
     }
 }
 
 if (isset($_POST['delete_song'])) {
     $song_name_to_delete = trim($_POST['delete_song_name']);
 
-    $sql = "DELETE FROM songs WHERE s_name = '$song_name_to_delete'";
-    if ($mysqli->query($sql)) {
-        if ($mysqli->affected_rows > 0) {
-            echo "<script>alert('Song deleted successfully!'); location.href = location.href;</script>";
-        } else {
-            echo "<script>alert('Song not found.'); location.href = location.href;</script>";
-        }
+    $song_id = filter_var($song_name_to_delete, FILTER_VALIDATE_INT, ["options" => ["min_range" => 1]]);
+    if ($song_id === false && !is_valid_length($song_name_to_delete, 1, 100)) {
+        echo "<script>alert('Please enter a valid song identifier.'); location.href = location.href;</script>";
     } else {
-        echo "<script>alert('Failed to delete song.'); location.href = location.href;</script>";
+        try {
+            if ($song_id !== false) {
+                $stmt = $mysqli->prepare("DELETE FROM songs WHERE song_id = ?");
+                if ($stmt) {
+                    $stmt->bind_param("i", $song_id);
+                }
+            } else {
+                $stmt = $mysqli->prepare("DELETE FROM songs WHERE s_name = ?");
+                if ($stmt) {
+                    $stmt->bind_param("s", $song_name_to_delete);
+                }
+            }
+
+            if ($stmt) {
+                if ($stmt->execute()) {
+                    if ($stmt->affected_rows > 0) {
+                        echo "<script>alert('Song deleted successfully!'); location.href = location.href;</script>";
+                    } else {
+                        echo "<script>alert('Song not found.'); location.href = location.href;</script>";
+                    }
+                } else {
+                    echo "<script>alert('Failed to delete song. Please try again.'); location.href = location.href;</script>";
+                }
+                $stmt->close();
+            } else {
+                echo "<script>alert('Failed to delete song. Please try again.'); location.href = location.href;</script>";
+            }
+        } catch (mysqli_sql_exception $e) {
+            error_log('Delete song error: ' . $e->getMessage());
+            echo "<script>alert('Failed to delete song. Please try again.'); location.href = location.href;</script>";
+        }
     }
 }
 
@@ -170,32 +376,42 @@ if (isset($_POST['delete_song'])) {
 if (isset($_POST['index_songs']) && isset($_POST['song_columns'])) {
     session_start(); 
 
-    $columns = $_POST['song_columns'];
+    $columns = array_values(array_intersect($_POST['song_columns'], $allowed_song_columns));
     $indexed = [];
 
-    foreach ($columns as $column) {
-        $column = $mysqli->real_escape_string($column);
-        $index_name = "idx_songs_" . $column;
-
-        $check = $mysqli->prepare("SHOW INDEX FROM songs WHERE Key_name = ?");
-        $check->bind_param("s", $index_name);
-        $check->execute();
-        $result = $check->get_result();
-
-        if ($result->num_rows === 0) {
-            $sql = "CREATE INDEX `$index_name` ON songs(`$column`)";
-            if ($mysqli->query($sql)) {
-                $indexed[] = $column;
-            }
-        }
-
-        $check->close();
+    if (empty($columns)) {
+        $_SESSION['indexing_msg'] = 'No valid columns selected.';
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit;
     }
 
-    if (!empty($indexed)) {
-        $_SESSION['indexing_msg'] = 'Indexed song columns: ' . implode(", ", $indexed);
-    } else {
-        $_SESSION['indexing_msg'] = 'All selected song columns were already indexed.';
+    try {
+        foreach ($columns as $column) {
+            $index_name = "idx_songs_" . $column;
+
+            $check = $mysqli->prepare("SHOW INDEX FROM songs WHERE Key_name = ?");
+            $check->bind_param("s", $index_name);
+            $check->execute();
+            $result = $check->get_result();
+
+            if ($result->num_rows === 0) {
+                $sql = "CREATE INDEX `$index_name` ON songs(`$column`)";
+                if ($mysqli->query($sql)) {
+                    $indexed[] = $column;
+                }
+            }
+
+            $check->close();
+        }
+
+        if (!empty($indexed)) {
+            $_SESSION['indexing_msg'] = 'Indexed song columns: ' . implode(", ", $indexed);
+        } else {
+            $_SESSION['indexing_msg'] = 'All selected song columns were already indexed.';
+        }
+    } catch (mysqli_sql_exception $e) {
+        error_log('Index songs error: ' . $e->getMessage());
+        $_SESSION['indexing_msg'] = 'Indexing failed. Please try again.';
     }
 
     header("Location: " . $_SERVER['PHP_SELF']);
@@ -206,32 +422,42 @@ if (isset($_POST['index_songs']) && isset($_POST['song_columns'])) {
 if (isset($_POST['index_fav']) && isset($_POST['fav_columns'])) {
     session_start(); 
 
-    $columns = $_POST['fav_columns'];
+    $columns = array_values(array_intersect($_POST['fav_columns'], $allowed_fav_columns));
     $indexed = [];
 
-    foreach ($columns as $column) {
-        $column = $mysqli->real_escape_string($column);
-        $index_name = "idx_fav_" . $column;
-
-        $check = $mysqli->prepare("SHOW INDEX FROM favourite WHERE Key_name = ?");
-        $check->bind_param("s", $index_name);
-        $check->execute();
-        $result = $check->get_result();
-
-        if ($result->num_rows === 0) {
-            $sql = "CREATE INDEX `$index_name` ON favourite(`$column`)";
-            if ($mysqli->query($sql)) {
-                $indexed[] = $column;
-            }
-        }
-
-        $check->close();
+    if (empty($columns)) {
+        $_SESSION['indexing_msg'] = 'No valid columns selected.';
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit;
     }
 
-    if (!empty($indexed)) {
-        $_SESSION['indexing_msg'] = 'Indexed favourite columns: ' . implode(", ", $indexed);
-    } else {
-        $_SESSION['indexing_msg'] = 'All selected favourite columns were already indexed.';
+    try {
+        foreach ($columns as $column) {
+            $index_name = "idx_fav_" . $column;
+
+            $check = $mysqli->prepare("SHOW INDEX FROM favourite WHERE Key_name = ?");
+            $check->bind_param("s", $index_name);
+            $check->execute();
+            $result = $check->get_result();
+
+            if ($result->num_rows === 0) {
+                $sql = "CREATE INDEX `$index_name` ON favourite(`$column`)";
+                if ($mysqli->query($sql)) {
+                    $indexed[] = $column;
+                }
+            }
+
+            $check->close();
+        }
+
+        if (!empty($indexed)) {
+            $_SESSION['indexing_msg'] = 'Indexed favourite columns: ' . implode(", ", $indexed);
+        } else {
+            $_SESSION['indexing_msg'] = 'All selected favourite columns were already indexed.';
+        }
+    } catch (mysqli_sql_exception $e) {
+        error_log('Index favourite error: ' . $e->getMessage());
+        $_SESSION['indexing_msg'] = 'Indexing failed. Please try again.';
     }
 
     header("Location: " . $_SERVER['PHP_SELF']);
@@ -241,32 +467,42 @@ if (isset($_POST['index_fav']) && isset($_POST['fav_columns'])) {
 if (isset($_POST['index_history']) && isset($_POST['history_columns'])) {
     session_start();
 
-    $columns = $_POST['history_columns'];
+    $columns = array_values(array_intersect($_POST['history_columns'], $allowed_history_columns));
     $indexed = [];
 
-    foreach ($columns as $column) {
-        $column = $mysqli->real_escape_string($column);
-        $index_name = "idx_history_" . $column;
-
-        $check = $mysqli->prepare("SHOW INDEX FROM history WHERE Key_name = ?");
-        $check->bind_param("s", $index_name);
-        $check->execute();
-        $result = $check->get_result();
-
-        if ($result->num_rows === 0) {
-            $sql = "CREATE INDEX `$index_name` ON history(`$column`)";
-            if ($mysqli->query($sql)) {
-                $indexed[] = $column;
-            }
-        }
-
-        $check->close();
+    if (empty($columns)) {
+        $_SESSION['indexing_msg'] = 'No valid columns selected.';
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit;
     }
 
-    if (!empty($indexed)) {
-        $_SESSION['indexing_msg'] = 'Indexed history columns: ' . implode(", ", $indexed);
-    } else {
-        $_SESSION['indexing_msg'] = 'All selected history columns were already indexed.';
+    try {
+        foreach ($columns as $column) {
+            $index_name = "idx_history_" . $column;
+
+            $check = $mysqli->prepare("SHOW INDEX FROM history WHERE Key_name = ?");
+            $check->bind_param("s", $index_name);
+            $check->execute();
+            $result = $check->get_result();
+
+            if ($result->num_rows === 0) {
+                $sql = "CREATE INDEX `$index_name` ON history(`$column`)";
+                if ($mysqli->query($sql)) {
+                    $indexed[] = $column;
+                }
+            }
+
+            $check->close();
+        }
+
+        if (!empty($indexed)) {
+            $_SESSION['indexing_msg'] = 'Indexed history columns: ' . implode(", ", $indexed);
+        } else {
+            $_SESSION['indexing_msg'] = 'All selected history columns were already indexed.';
+        }
+    } catch (mysqli_sql_exception $e) {
+        error_log('Index history error: ' . $e->getMessage());
+        $_SESSION['indexing_msg'] = 'Indexing failed. Please try again.';
     }
 
     header("Location: " . $_SERVER['PHP_SELF']);
@@ -275,16 +511,28 @@ if (isset($_POST['index_history']) && isset($_POST['history_columns'])) {
 
 
 if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
-    $table = $mysqli->real_escape_string($_POST['table']);
-    $index = $mysqli->real_escape_string($_POST['index_name']);
+    $table = $_POST['table'];
+    $index = $_POST['index_name'];
 
-    $sql = "DROP INDEX `$index` ON `$table`";
-
-    if ($mysqli->query($sql)) {
-        $_SESSION['indexing_msg'] = "Dropped index <strong>$index</strong> from <strong>$table</strong>.";
-    } else {
-        $_SESSION['indexing_msg'] = "Failed to drop index <strong>$index</strong> from <strong>$table</strong>.";
+    if (!in_array($table, $allowed_tables, true) || !preg_match('/^idx_[A-Za-z0-9_]+$/', $index)) {
+        $_SESSION['indexing_msg'] = 'Invalid index selection.';
+        header("Location: ?tab=indexing&action=display");
+        exit;
     }
+
+    try {
+        $sql = "DROP INDEX `$index` ON `$table`";
+
+        if ($mysqli->query($sql)) {
+            $_SESSION['indexing_msg'] = "Dropped index $index from $table.";
+        } else {
+            $_SESSION['indexing_msg'] = "Failed to drop index $index from $table.";
+        }
+    } catch (mysqli_sql_exception $e) {
+        error_log('Drop index error: ' . $e->getMessage());
+        $_SESSION['indexing_msg'] = 'Failed to drop index. Please try again.';
+    }
+
     header("Location: ?tab=indexing&action=display");
     exit;
 }
@@ -913,7 +1161,7 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
                         class="admin-icon">
                     <h2 class="admin-heading">Admin Panel</h2>
                 </div>
-                <a href="/" class="logout-btn" title="Logout">
+                <a href="/Project/pages/logout.php" class="logout-btn" title="Logout">
                     <img src="../img/logout.png" alt="Logout">
                 </a>
             </div>
@@ -948,7 +1196,9 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
                     </div>
                 </div>
 
-                <?php if (!empty($users)): ?>
+                <?php if ($users_error !== ''): ?>
+                    <p><?php echo htmlspecialchars($users_error); ?></p>
+                <?php elseif (!empty($users)): ?>
                     <table class="display-table">
                         <thead>
                             <tr>
@@ -987,6 +1237,7 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
                             style="float: right; cursor: pointer;">&times;</span>
                         <h2>Add New Song</h2>
                         <form method="post">
+                            <?php echo csrf_field(); ?>
                             <input type="text" name="s_name" placeholder="Song Name" required>
                             <input type="text" name="artist" placeholder="Artist" required>
                             <input type="text" name="path" placeholder="Path/URL" required>
@@ -1006,7 +1257,9 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
                     </div>
                 </div>
 
-                <?php if (isset($_GET['action']) && $_GET['action'] === 'display' && $_GET['tab'] === 'songs' && !empty($songs)): ?>
+                <?php if (isset($_GET['action']) && $_GET['action'] === 'display' && $_GET['tab'] === 'songs' && $songs_error !== ''): ?>
+                    <p><?php echo htmlspecialchars($songs_error); ?></p>
+                <?php elseif (isset($_GET['action']) && $_GET['action'] === 'display' && $_GET['tab'] === 'songs' && !empty($songs)): ?>
                     <table class="songs-table">
                         <thead>
                             <tr>
@@ -1090,7 +1343,7 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
                                 <td style='text-transform: capitalize;'>" . htmlspecialchars($table) . "</td>
                                 <td>" . htmlspecialchars($column) . "</td>
                                 <td>
-                                  <form method='post' style='display:inline;'>
+                                                                    <form method='post' style='display:inline;'>" . csrf_field() . "
                                     <input type='hidden' name='drop_index' value='1'>
                                     <input type='hidden' name='table' value='" . htmlspecialchars($table) . "'>
                                     <input type='hidden' name='index_name' value='" . htmlspecialchars($key) . "'>
@@ -1124,6 +1377,7 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
             <span id="close-popup" onclick="closeForms()" style="float: right; cursor: pointer;">×</span>
             <h2>Index Users Table</h2>
             <form method="post">
+                <?php echo csrf_field(); ?>
                 <label><input type="checkbox" name="columns[]" value="user_id"> user_id</label><br>
                 <label><input type="checkbox" name="columns[]" value="username"> username</label><br>
                 <label><input type="checkbox" name="columns[]" value="pwd"> pwd</label><br>
@@ -1139,6 +1393,7 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
             <span id="close-popup" onclick="closeForms()" style="float: right; cursor: pointer;">×</span>
             <h2>Index Songs Table</h2>
             <form method="post">
+                <?php echo csrf_field(); ?>
                 <label><input type="checkbox" name="song_columns[]" value="song_id"> song_id</label><br>
                 <label><input type="checkbox" name="song_columns[]" value="s_name"> s_name</label><br>
                 <label><input type="checkbox" name="song_columns[]" value="artist"> artist</label><br>
@@ -1153,6 +1408,7 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
             <span id="close-popup" onclick="closeForms()" style="float: right; cursor: pointer;">×</span>
             <h2>Index Favourite Table</h2>
             <form method="post">
+                <?php echo csrf_field(); ?>
                 <label><input type="checkbox" name="fav_columns[]" value="fav_id"> fav_id</label><br>
                 <label><input type="checkbox" name="fav_columns[]" value="user_id"> user_id</label><br>
                 <label><input type="checkbox" name="fav_columns[]" value="song_id"> song_id</label><br>
@@ -1166,6 +1422,7 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
             <span id="close-popup" onclick="closeForms()" style="float: right; cursor: pointer;">×</span>
             <h2>Index History Table</h2>
             <form method="post">
+                <?php echo csrf_field(); ?>
                 <label><input type="checkbox" name="history_columns[]" value="history_id"> history_id</label><br>
                 <label><input type="checkbox" name="history_columns[]" value="user_id"> user_id</label><br>
                 <label><input type="checkbox" name="history_columns[]" value="song_id"> song_id</label><br>
@@ -1189,6 +1446,7 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
         <span id="close-song-popup" onclick="closeForms()" style="float: right; cursor: pointer;">&times;</span>
         <h2>Delete Song</h2>
         <form method="post">
+            <?php echo csrf_field(); ?>
             <input type="text" name="delete_song_name" id="delete-song-name" placeholder="Enter Song Name" required>
             <p>Are you sure you want to delete this song?</p>
             <button type="submit" name="delete_song">Delete Song</button>
@@ -1200,6 +1458,7 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
         <span id="close-song-popup" onclick="closeForms()" style="float: right; cursor: pointer;">&times;</span>
         <h2>Edit Song</h2>
         <form method="post">
+            <?php echo csrf_field(); ?>
             <input type="text" name="old_song_id" id="edit-song-id" placeholder="Old Song Name" required>
             <input type="text" name="new_s_name" placeholder="New Song Name" required>
             <input type="text" name="new_artist" placeholder="New Artist" required>
@@ -1213,6 +1472,7 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
         <span id="close-popup" onclick="closeForms()">X</span>
         <h2>Add New User</h2>
         <form method="post">
+            <?php echo csrf_field(); ?>
             <input type="text" name="username" placeholder="Username" required>
             <input type="email" name="email" placeholder="Email" required>
             <input type="password" name="password" placeholder="Password" required>
@@ -1229,6 +1489,7 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
         <span id="close-popup" onclick="closeForms()">X</span>
         <h2>Delete User</h2>
         <form method="post">
+            <?php echo csrf_field(); ?>
             <input type="text" name="delete_username" placeholder="Enter Username to Delete" required>
             <button type="submit" name="delete_user">Delete User</button>
         </form>
@@ -1242,6 +1503,7 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
         <span id="close-popup" onclick="closeForms()" style="float: right; cursor: pointer;">×</span>
         <h2>Index Users Table</h2>
         <form method="post">
+            <?php echo csrf_field(); ?>
             <label><input type="checkbox" name="columns[]" value="user_id"> user_id</label><br>
             <label><input type="checkbox" name="columns[]" value="username"> username</label><br>
             <label><input type="checkbox" name="columns[]" value="pwd"> pwd</label><br>
@@ -1257,6 +1519,7 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
         <span id="close-popup" onclick="closeForms()">X</span>
         <h2>Edit User</h2>
         <form method="post">
+            <?php echo csrf_field(); ?>
             <input type="text" name="old_username" placeholder="Current Username" required>
             <input type="text" name="new_username" placeholder="New Username" required>
             <input type="email" name="new_email" placeholder="New Email" required>

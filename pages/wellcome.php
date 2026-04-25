@@ -1,3 +1,15 @@
+<?php
+require_once __DIR__ . '/../includes/auth.php';
+
+require_login();
+
+$auth_error = $_SESSION['auth_error'] ?? '';
+if ($auth_error !== '') {
+  unset($_SESSION['auth_error']);
+  echo "<script>alert('" . addslashes($auth_error) . "');</script>";
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
