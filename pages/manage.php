@@ -1116,6 +1116,15 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
             background-color: rgba(255, 114, 0, 0.5);
         }
 
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .table-wrapper table {
+            min-width: 600px;
+        }
+
         @keyframes shine {
             0% {
                 background-position: 0% center;
@@ -1135,6 +1144,84 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
             to {
                 opacity: 1;
                 transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .admin-panel {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .sidebar {
+                width: 100%;
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 10px;
+            }
+
+            .sidebar h2 {
+                width: 100%;
+                margin-bottom: 20px;
+            }
+
+            .sidebar button {
+                width: auto;
+            }
+
+            .navbar {
+                flex-direction: column;
+                align-items: center;
+                gap: 12px;
+                position: relative;
+                padding-right: 84px;
+            }
+
+            .navbar .logout-btn {
+                position: absolute;
+                top: 0;
+                right: 20px;
+            }
+
+            .admin-header {
+                padding-right: 0;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+
+            .admin-image {
+                width: 100%;
+                height: auto;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .admin-heading {
+                font-size: 22px;
+            }
+
+            .navbar {
+                padding-right: 74px;
+            }
+
+            .action-tile {
+                width: 80px;
+                height: 80px;
+            }
+
+            .popup-form,
+            #add-user-form,
+            #delete-user-form,
+            #edit-user-form {
+                width: 90%;
+            }
+
+            .home-button {
+                width: 100%;
+                text-align: center;
             }
         }
     </style>
@@ -1199,30 +1286,32 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
                 <?php if ($users_error !== ''): ?>
                     <p><?php echo htmlspecialchars($users_error); ?></p>
                 <?php elseif (!empty($users)): ?>
-                    <table class="display-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Username</th>
-                                <th>Password</th>
-                                <th>Email</th>
-                                <th>Register Date</th>
-                                <th>Role</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($users as $user): ?>
+                    <div class="table-wrapper">
+                        <table class="display-table">
+                            <thead>
                                 <tr>
-                                    <td><?= htmlspecialchars($user['user_id']) ?></td>
-                                    <td><?= htmlspecialchars($user['username']) ?></td>
-                                    <td><?= htmlspecialchars($user['pwd']) ?></td>
-                                    <td><?= htmlspecialchars($user['email']) ?></td>
-                                    <td><?= htmlspecialchars($user['register_date']) ?></td>
-                                    <td><?= htmlspecialchars($user['role']) ?></td>
+                                    <th>ID</th>
+                                    <th>Username</th>
+                                    <th>Password</th>
+                                    <th>Email</th>
+                                    <th>Register Date</th>
+                                    <th>Role</th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($users as $user): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($user['user_id']) ?></td>
+                                        <td><?= htmlspecialchars($user['username']) ?></td>
+                                        <td><?= htmlspecialchars($user['pwd']) ?></td>
+                                        <td><?= htmlspecialchars($user['email']) ?></td>
+                                        <td><?= htmlspecialchars($user['register_date']) ?></td>
+                                        <td><?= htmlspecialchars($user['role']) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 <?php endif; ?>
             </div>
             <div id="songs" class="section">
@@ -1260,28 +1349,30 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
                 <?php if (isset($_GET['action']) && $_GET['action'] === 'display' && $_GET['tab'] === 'songs' && $songs_error !== ''): ?>
                     <p><?php echo htmlspecialchars($songs_error); ?></p>
                 <?php elseif (isset($_GET['action']) && $_GET['action'] === 'display' && $_GET['tab'] === 'songs' && !empty($songs)): ?>
-                    <table class="songs-table">
-                        <thead>
-                            <tr>
-                                <th>Song ID</th>
-                                <th>Song Name</th>
-                                <th>Artist</th>
-                                <th>Added At</th>
-                                <th>Path</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($songs as $song): ?>
+                    <div class="table-wrapper">
+                        <table class="songs-table">
+                            <thead>
                                 <tr>
-                                    <td><?= htmlspecialchars($song['song_id']) ?></td>
-                                    <td><?= htmlspecialchars($song['s_name']) ?></td>
-                                    <td><?= htmlspecialchars($song['artist']) ?></td>
-                                    <td><?= htmlspecialchars($song['added_at']) ?></td>
-                                    <td><?= htmlspecialchars($song['path']) ?></td>
+                                    <th>Song ID</th>
+                                    <th>Song Name</th>
+                                    <th>Artist</th>
+                                    <th>Added At</th>
+                                    <th>Path</th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($songs as $song): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($song['song_id']) ?></td>
+                                        <td><?= htmlspecialchars($song['s_name']) ?></td>
+                                        <td><?= htmlspecialchars($song['artist']) ?></td>
+                                        <td><?= htmlspecialchars($song['added_at']) ?></td>
+                                        <td><?= htmlspecialchars($song['path']) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 <?php elseif (isset($_GET['action']) && $_GET['action'] === 'display' && $_GET['tab'] === 'songs'): ?>
                     <p>No songs found.</p>
                 <?php endif; ?>
@@ -1317,15 +1408,16 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
                     <div style="margin-top: 30px;">
                         <h3 style="color: #ff7200;">Indexed Columns Overview</h3>
 
-                        <table class="display-table">
-                            <thead>
-                                <tr>
-                                    <th>Table Name</th>
-                                    <th>Indexed Column</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                        <div class="table-wrapper">
+                            <table class="display-table">
+                                <thead>
+                                    <tr>
+                                        <th>Table Name</th>
+                                        <th>Indexed Column</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
                                 <?php
                                 $tables = ['users', 'songs', 'favourite', 'history'];
                                 $indexedCount = 0;
@@ -1361,8 +1453,9 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
                                     echo "<tr><td colspan='3' style='text-align: center;'>No custom indexes found.</td></tr>";
                                 }
                                 ?>
-                            </tbody>
-                        </table>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 <?php endif; ?>
 

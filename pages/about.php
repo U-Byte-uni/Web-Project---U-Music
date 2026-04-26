@@ -220,11 +220,61 @@ session_start();
                 flex-direction: column;
                 gap: 10px;
                 height: auto;
+                position: relative;
+                padding-right: 84px;
+            }
+
+            .navbar > .logout-btn {
+                position: absolute;
+                top: 0;
+                right: 20px;
             }
 
             .menu ul {
                 flex-direction: column;
                 gap: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo {
+                font-size: 36px;
+            }
+
+            .logo-u {
+                font-size: 54px;
+            }
+
+            .menu ul {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .navbar {
+                padding-right: 74px;
+            }
+
+            .about-container {
+                padding: 24px;
+                box-shadow: 0 0 12px rgba(255, 114, 0, 0.25);
+                backdrop-filter: blur(4px);
+            }
+
+            .about-container h1 {
+                font-size: 28px;
+            }
+
+            .image-box {
+                min-height: 280px;
+            }
+
+            .social-icons {
+                gap: 12px;
+            }
+
+            .site-footer-links {
+                gap: 16px;
+                font-size: 14px;
             }
         }
 

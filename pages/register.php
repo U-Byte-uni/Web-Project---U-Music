@@ -251,6 +251,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
         font-size: 2rem;
       }
     }
+
+    @media screen and (max-width: 768px) {
+      .login {
+        padding: 0 12px;
+      }
+
+      .login__form {
+        margin-inline: 1rem;
+      }
+
+      .login__title {
+        font-size: 1.5rem;
+      }
+    }
+
+    @media screen and (max-width: 480px) {
+      .login__form {
+        padding: 2rem 1.25rem;
+      }
+
+      .login__button {
+        min-height: 44px;
+      }
+
+      .login__content {
+        row-gap: 1.25rem;
+      }
+    }
   </style>
 </head>
 <body>

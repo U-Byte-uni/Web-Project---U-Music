@@ -180,7 +180,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
       gap: 30px;
     }
 
-    .sidebar-buttons button {
+    .sidebar-buttons button,
+    .sidebar-buttons a {
       background: none;
       border: none;
       color: white;
@@ -195,9 +196,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
       padding: 8px 12px;
       border-radius: 8px;
       z-index: 0;
+      text-decoration: none;
     }
 
-    .sidebar-buttons button::before {
+    .sidebar-buttons button::before,
+    .sidebar-buttons a::before {
       content: "";
       position: absolute;
       inset: 0;
@@ -207,17 +210,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
       z-index: -1;
     }
 
-    .sidebar-buttons button:hover::before {
+    .sidebar-buttons button:hover::before,
+    .sidebar-buttons a:hover::before {
       transform: translateX(0);
     }
 
-    .sidebar-buttons button i {
+    .sidebar-buttons button i,
+    .sidebar-buttons a i {
       color: #ff7200;
       font-size: 24px;
       transition: transform 0.3s, color 0.3s, text-shadow 0.3s;
     }
 
-    .sidebar-buttons button:hover i {
+    .sidebar-buttons button:hover i,
+    .sidebar-buttons a:hover i {
       transform: scale(1.2);
       color: rgb(243, 185, 138);
       text-shadow: 0 0 8px #ff7200;
@@ -250,6 +256,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
       position: relative;
       top: 20px;
       background-color: transparent;
+    }
+
+    .mobile-menu-btn {
+      display: none;
+      width: 44px;
+      height: 44px;
+      border: none;
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.35);
+      color: #fff;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mobile-menu-btn i {
+      font-size: 20px;
+      color: #ff7200;
     }
 
     .logo {
@@ -739,6 +763,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
         flex-direction: column;
         height: auto;
         gap: 10px;
+        position: relative;
+        padding-right: 84px;
+      }
+
+      .logout {
+        position: absolute;
+        top: 0;
+        right: 20px;
+        margin-left: 0;
       }
 
       .menu ul {
@@ -747,7 +780,87 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
       }
 
       .gallery-grid {
-        padding: 0 20px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        justify-items: stretch;
+        padding: 0 10px;
+      }
+
+      .song-item {
+        width: 100%;
+      }
+
+      .sidebar {
+        width: 60px;
+      }
+
+      .sidebar.expanded {
+        width: 180px;
+      }
+
+      .content {
+        margin-left: 0;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .mobile-menu-btn {
+        display: inline-flex;
+      }
+
+      .navbar {
+        align-items: center;
+        text-align: center;
+        padding-right: 74px;
+      }
+
+      .menu ul {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .sidebar {
+        width: 220px;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+      }
+
+      .sidebar.collapsed {
+        transform: translateX(-100%);
+      }
+
+      .sidebar.expanded {
+        transform: translateX(0);
+      }
+
+      .main {
+        padding-left: 0;
+      }
+
+      .content {
+        margin-left: 0;
+      }
+
+      .gallery-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+      }
+
+      .song-item {
+        width: 100%;
+      }
+
+      .search-bar-container {
+        width: 100%;
+        max-width: none;
+      }
+
+      .search-bar,
+      .search-button {
+        height: 44px;
+      }
+
+      .gallery-title {
+        font-size: 32px;
       }
     }
   </style>
@@ -762,10 +875,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
         <i class="fas fa-angle-double-left" id="toggle-icon"></i>
       </button>
       <div class="sidebar-buttons">
-        <button type="button" onclick="toggleSidebar()">
+        <a href="profile.php" class="sidebar-link">
           <i class="fas fa-user-circle"></i>
           <span><?php echo $_SESSION['username'] ?? 'Username'; ?></span>
-        </button>
+        </a>
         <button type="button" onclick="showSidebarSection('favourites')">
           <i class="fas fa-star"></i>
           <span>Favourites</span>
@@ -780,6 +893,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
 
     <div class="content">
       <div class="navbar">
+        <button class="mobile-menu-btn" type="button" onclick="toggleSidebar()" aria-label="Toggle sidebar">
+          <i class="fas fa-bars"></i>
+        </button>
         <a href="gallery.php" class="logo" style="text-decoration: none;">
           <span class="logo-u">U</span><span class="logo-music">-Music</span>
         </a>

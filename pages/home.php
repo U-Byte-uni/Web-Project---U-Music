@@ -248,6 +248,11 @@ session_start();
             margin: 10px 0;
         }
 
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
         @keyframes fadeUp {
             from {
                 opacity: 0;
@@ -306,6 +311,83 @@ session_start();
 
             100% {
                 background-position: 200% center;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                flex-direction: column;
+                gap: 12px;
+                height: auto;
+                text-align: center;
+                position: relative;
+                padding-right: 84px;
+            }
+
+            .logout {
+                position: absolute;
+                top: 0;
+                right: 20px;
+                margin-left: 0;
+            }
+
+            .menu ul {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 12px;
+            }
+
+            .content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .content-text {
+                padding-right: 0;
+            }
+
+            .home-image {
+                margin-top: 20px;
+            }
+
+            .content h1 {
+                font-size: 2.5rem;
+            }
+
+            .features {
+                padding: 40px 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .content h1 {
+                font-size: 2rem;
+            }
+
+            .navbar {
+                padding-right: 74px;
+            }
+
+            .content .cn {
+                width: 100%;
+                height: 44px;
+            }
+
+            .content .cn a {
+                line-height: 44px;
+            }
+
+            .feature-cards {
+                gap: 16px;
+            }
+
+            .card {
+                width: 100%;
+            }
+
+            .site-footer-links {
+                gap: 16px;
+                font-size: 14px;
             }
         }
     </style>

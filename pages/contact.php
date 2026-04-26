@@ -328,6 +328,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        @media (max-width: 768px) {
+            .navbar {
+                flex-direction: column;
+                gap: 10px;
+                height: auto;
+                text-align: center;
+                position: relative;
+                padding-right: 84px;
+            }
+
+            .navbar > .logout-btn {
+                position: absolute;
+                top: 0;
+                right: 20px;
+            }
+
+            .menu ul {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 10px;
+            }
+
+            .contact-container {
+                padding: 28px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo {
+                font-size: 36px;
+            }
+
+            .logo-u {
+                font-size: 54px;
+            }
+
+            .navbar {
+                padding-right: 74px;
+            }
+
+            .contact-container h1 {
+                font-size: 28px;
+            }
+
+            .contact-container {
+                box-shadow: 0 0 12px rgba(255, 114, 0, 0.25);
+                backdrop-filter: blur(4px);
+            }
+
+            .contact-form button {
+                width: 100%;
+                min-height: 44px;
+            }
+
+            .site-footer-links {
+                gap: 16px;
+                font-size: 14px;
+            }
+        }
+
         @keyframes shine {
             0% {
                 background-position: 0% center;
