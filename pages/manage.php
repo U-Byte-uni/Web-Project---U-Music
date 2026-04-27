@@ -1,14 +1,22 @@
 <?php
+/**
+ * Admin Manage Controller
+ *
+ * Handles admin-only CRUD operations for users and songs,
+ * plus indexing utilities for selected tables.
+ */
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 
 require_admin();
 
+// Enforce CSRF on all admin POST actions (CRUD + indexing).
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
 }
 
+// Allow-lists used to validate roles, indexable columns, and target tables.
 $valid_roles = ['admin', 'user'];
 $allowed_user_columns = ['user_id', 'username', 'pwd', 'email', 'register_date', 'role'];
 $allowed_song_columns = ['song_id', 's_name', 'artist', 'added_at', 'path'];
@@ -19,12 +27,66 @@ $allowed_tables = ['users', 'songs', 'favourite', 'history'];
 $users_error = '';
 $songs_error = '';
 
+/**
+ * Validate whether a string length is inside the allowed bounds.
+ *
+ * @param string $value Input value to validate.
+ * @param int $min Minimum allowed length.
+ * @param int $max Maximum allowed length.
+ * @return bool True when length is between min and max.
+ */
 function is_valid_length(string $value, int $min, int $max): bool
 {
     $len = strlen($value);
     return $len >= $min && $len <= $max;
 }
 
+/**
+ * Build escaped HTML table rows for users list output.
+ *
+ * @param array<int,array<string,mixed>> $users Users result set.
+ * @return string HTML rows ready for table body.
+ */
+function render_users_rows(array $users): string
+{
+    $html = '';
+    foreach ($users as $user) {
+        $html .= '<tr>';
+        $html .= '<td>' . htmlspecialchars((string) $user['user_id']) . '</td>';
+        $html .= '<td>' . htmlspecialchars((string) $user['username']) . '</td>';
+        $html .= '<td>' . htmlspecialchars((string) $user['pwd']) . '</td>';
+        $html .= '<td>' . htmlspecialchars((string) $user['email']) . '</td>';
+        $html .= '<td>' . htmlspecialchars((string) $user['register_date']) . '</td>';
+        $html .= '<td>' . htmlspecialchars((string) $user['role']) . '</td>';
+        $html .= '</tr>';
+    }
+
+    return $html;
+}
+
+/**
+ * Build escaped HTML table rows for songs list output.
+ *
+ * @param array<int,array<string,mixed>> $songs Songs result set.
+ * @return string HTML rows ready for table body.
+ */
+function render_songs_rows(array $songs): string
+{
+    $html = '';
+    foreach ($songs as $song) {
+        $html .= '<tr>';
+        $html .= '<td>' . htmlspecialchars((string) $song['song_id']) . '</td>';
+        $html .= '<td>' . htmlspecialchars((string) $song['s_name']) . '</td>';
+        $html .= '<td>' . htmlspecialchars((string) $song['artist']) . '</td>';
+        $html .= '<td>' . htmlspecialchars((string) $song['added_at']) . '</td>';
+        $html .= '<td>' . htmlspecialchars((string) $song['path']) . '</td>';
+        $html .= '</tr>';
+    }
+
+    return $html;
+}
+
+/* ========================= Users: Read ========================= */
 $users = [];
 if (isset($_GET['action']) && $_GET['action'] === 'display') {
     try {
@@ -40,6 +102,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'display') {
     }
 }
 
+/* ========================= Users: Create ======================= */
 if (isset($_POST['add_user'])) {
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);
@@ -67,9 +130,15 @@ if (isset($_POST['add_user'])) {
         echo "<script>alert('" . addslashes(implode(' ', $errors)) . "'); location.href = location.href;</script>";
     } else {
         try {
+            $password_hash = password_hash($password, PASSWORD_DEFAULT);
+            if ($password_hash === false) {
+                echo "<script>alert('Failed to add user. Please try again.'); location.href = location.href;</script>";
+                exit;
+            }
+
             $stmt = $mysqli->prepare("INSERT INTO users (username, email, pwd, role) VALUES (?, ?, ?, ?)");
             if ($stmt) {
-                $stmt->bind_param("ssss", $username, $email, $password, $role);
+                $stmt->bind_param("ssss", $username, $email, $password_hash, $role);
                 if ($stmt->execute()) {
                     echo "<script>alert('User added successfully!'); location.href = location.href;</script>";
                 } else {
@@ -86,6 +155,7 @@ if (isset($_POST['add_user'])) {
     }
 }
 
+/* ========================= Users: Delete ======================= */
 if (isset($_POST['delete_user'])) {
     $usernameToDelete = trim($_POST['delete_username']);
 
@@ -116,6 +186,7 @@ if (isset($_POST['delete_user'])) {
     }
 }
 
+/* ========================= Users: Update ======================= */
 if (isset($_POST['edit_user'])) {
     $old_username = trim($_POST['old_username']);
     $new_username = trim($_POST['new_username']);
@@ -136,7 +207,7 @@ if (isset($_POST['edit_user'])) {
         $errors[] = 'A valid email address is required.';
     }
 
-    if (!is_valid_length($new_password, 6, 255)) {
+    if ($new_password !== '' && !is_valid_length($new_password, 6, 255)) {
         $errors[] = 'Password must be between 6 and 255 characters.';
     }
 
@@ -148,9 +219,24 @@ if (isset($_POST['edit_user'])) {
         echo "<script>alert('" . addslashes(implode(' ', $errors)) . "'); location.href = location.href;</script>";
     } else {
         try {
-            $stmt = $mysqli->prepare("UPDATE users SET username = ?, email = ?, pwd = ?, role = ? WHERE username = ?");
+            if ($new_password === '') {
+                $stmt = $mysqli->prepare("UPDATE users SET username = ?, email = ?, role = ? WHERE username = ?");
+                if ($stmt) {
+                    $stmt->bind_param("ssss", $new_username, $new_email, $new_role, $old_username);
+                }
+            } else {
+                $new_password_hash = password_hash($new_password, PASSWORD_DEFAULT);
+                if ($new_password_hash === false) {
+                    echo "<script>alert('Failed to update user. Please try again.'); location.href = location.href;</script>";
+                    exit;
+                }
+                $stmt = $mysqli->prepare("UPDATE users SET username = ?, email = ?, pwd = ?, role = ? WHERE username = ?");
+                if ($stmt) {
+                    $stmt->bind_param("sssss", $new_username, $new_email, $new_password_hash, $new_role, $old_username);
+                }
+            }
+
             if ($stmt) {
-                $stmt->bind_param("sssss", $new_username, $new_email, $new_password, $new_role, $old_username);
                 if ($stmt->execute()) {
                     if ($stmt->affected_rows > 0) {
                         echo "<script>alert('User updated successfully!'); location.href = location.href;</script>";
@@ -170,6 +256,8 @@ if (isset($_POST['edit_user'])) {
         }
     }
 }
+
+/* ========================= Users: Indexing ===================== */
 if (isset($_POST['index_users']) && isset($_POST['columns'])) {
     session_start(); // Make sure this is at the top of your file
 
@@ -216,7 +304,7 @@ if (isset($_POST['index_users']) && isset($_POST['columns'])) {
 }
 
 
-
+/* ========================= Songs: Create ======================= */
 if (isset($_POST['add_song'])) {
     $s_name = trim($_POST['s_name']);
     $artist = trim($_POST['artist']);
@@ -257,6 +345,7 @@ if (isset($_POST['add_song'])) {
 }
 
 
+/* ========================= Songs: Read ========================= */
 $songs = [];
 if (isset($_GET['action']) && $_GET['action'] === 'display' && $_GET['tab'] === 'songs') {
     try {
@@ -272,6 +361,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'display' && $_GET['tab'] === 
     }
 }
 
+/* ========================= Songs: Update ======================= */
 if (isset($_POST['edit_song'])) {
     $old_song_id = trim($_POST['old_song_id']);
     $new_s_name = trim($_POST['new_s_name']);
@@ -331,6 +421,7 @@ if (isset($_POST['edit_song'])) {
     }
 }
 
+/* ========================= Songs: Delete ======================= */
 if (isset($_POST['delete_song'])) {
     $song_name_to_delete = trim($_POST['delete_song_name']);
 
@@ -373,6 +464,7 @@ if (isset($_POST['delete_song'])) {
 }
 
 
+/* ========================= Songs: Indexing ===================== */
 if (isset($_POST['index_songs']) && isset($_POST['song_columns'])) {
     session_start(); 
 
@@ -419,6 +511,7 @@ if (isset($_POST['index_songs']) && isset($_POST['song_columns'])) {
 }
 
 
+/* ==================== Favourites/History Indexing ============== */
 if (isset($_POST['index_fav']) && isset($_POST['fav_columns'])) {
     session_start(); 
 
@@ -468,6 +561,7 @@ if (isset($_POST['index_history']) && isset($_POST['history_columns'])) {
     session_start();
 
     $columns = array_values(array_intersect($_POST['history_columns'], $allowed_history_columns));
+/* ========================= Index Cleanup ======================== */
     $indexed = [];
 
     if (empty($columns)) {
@@ -550,13 +644,13 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
     <style>
         @font-face {
             font-family: 'Lucy';
-            src: url("../fonts/Lucy.ttf") format('truetype');
+            src: url("../assets/fonts/Lucy.ttf") format('truetype');
         }
 
         body {
             margin: 0;
             font-family: "Poppins", sans-serif;
-            background: url(../img/Bac.jpg) no-repeat center center fixed;
+            background: url(../assets/img/Bac.jpg) no-repeat center center fixed;
             background-size: cover;
             color: white;
         }
@@ -1249,16 +1343,17 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
                     <h2 class="admin-heading">Admin Panel</h2>
                 </div>
                 <a href="/Project/pages/logout.php" class="logout-btn" title="Logout">
-                    <img src="../img/logout.png" alt="Logout">
+                    <img src="../assets/img/logout.png" alt="Logout">
                 </a>
             </div>
 
+            <!-- Welcome section shown by default before selecting admin actions -->
             <div id="welcome" class="section active">
                 <h2 style="font-size: 40px;">Welcome Admin!</h2>
                 <p style="font-size: 20px;">Select an option from the sidebar to manage users or songs.</p>
 
                 <div class="admin-image-container">
-                    <img src="../img/admin.jpg" alt="Admin Welcome Image" class="admin-image">
+                    <img src="../assets/img/admin.jpg" alt="Admin Welcome Image" class="admin-image">
                 </div>
 
                 <div class="home-button-container">
@@ -1266,6 +1361,7 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
                 </div>
             </div>
 
+            <!-- Users management section (CRUD + display) -->
             <div id="users" class="section">
                 <h2>Manage Users</h2>
                 <div class="user-actions">
@@ -1299,21 +1395,13 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($users as $user): ?>
-                                    <tr>
-                                        <td><?= htmlspecialchars($user['user_id']) ?></td>
-                                        <td><?= htmlspecialchars($user['username']) ?></td>
-                                        <td><?= htmlspecialchars($user['pwd']) ?></td>
-                                        <td><?= htmlspecialchars($user['email']) ?></td>
-                                        <td><?= htmlspecialchars($user['register_date']) ?></td>
-                                        <td><?= htmlspecialchars($user['role']) ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
+                                <?php echo render_users_rows($users); ?>
                             </tbody>
                         </table>
                     </div>
                 <?php endif; ?>
             </div>
+            <!-- Songs management section (CRUD + display) -->
             <div id="songs" class="section">
                 <h2>Manage Songs</h2>
                 <div class="user-actions">
@@ -1361,15 +1449,7 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($songs as $song): ?>
-                                    <tr>
-                                        <td><?= htmlspecialchars($song['song_id']) ?></td>
-                                        <td><?= htmlspecialchars($song['s_name']) ?></td>
-                                        <td><?= htmlspecialchars($song['artist']) ?></td>
-                                        <td><?= htmlspecialchars($song['added_at']) ?></td>
-                                        <td><?= htmlspecialchars($song['path']) ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
+                                <?php echo render_songs_rows($songs); ?>
                             </tbody>
                         </table>
                     </div>
@@ -1378,6 +1458,7 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
                 <?php endif; ?>
 
             </div>
+            <!-- Indexing dashboard section for DB performance helpers -->
             <div id="indexing" class="section">
                 <h2>Indexing Dashboard</h2>
                 <div class="user-actions">
@@ -1419,9 +1500,11 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
                                 </thead>
                                 <tbody>
                                 <?php
+                                // Inspect each managed table and print only custom idx_* indexes.
                                 $tables = ['users', 'songs', 'favourite', 'history'];
                                 $indexedCount = 0;
 
+                                // Outer loop: per table; inner loop: per index returned by SHOW INDEX.
                                 foreach ($tables as $table) {
                                     $result = $mysqli->query("SHOW INDEX FROM `$table`");
 
@@ -1616,7 +1699,7 @@ if (isset($_POST['drop_index'], $_POST['table'], $_POST['index_name'])) {
             <input type="text" name="old_username" placeholder="Current Username" required>
             <input type="text" name="new_username" placeholder="New Username" required>
             <input type="email" name="new_email" placeholder="New Email" required>
-            <input type="password" name="new_password" placeholder="New Password" required>
+            <input type="password" name="new_password" placeholder="New Password (optional)">
             <select name="new_role" required>
                 <option value="admin">Admin</option>
                 <option value="user">User</option>

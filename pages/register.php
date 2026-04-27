@@ -1,4 +1,10 @@
 <?php
+/**
+ * Registration Controller
+ *
+ * Validates signup input, creates new users, and renders
+ * the registration interface.
+ */
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 require_once __DIR__ . '/../includes/db.php';
@@ -9,6 +15,7 @@ $form_error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST'
   && isset($_POST['username'], $_POST['email'], $_POST['password'])) {
 
+  // Verify CSRF token for all registration submissions.
   csrf_verify();
 
   $username = trim($_POST['username']);
@@ -34,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
     $errors[] = 'Password must be between 6 and 255 characters.';
   }
 
+  // Aggregate validation errors for one clear feedback message.
   if (!empty($errors)) {
     $form_error = implode(' ', $errors);
   } else {
@@ -48,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
       if ($stmt->num_rows) {
         $form_error = 'Username already in use. Please choose another one.';
       } else {
+        // Keep current role behavior: reserved admin username gets admin role.
         $role = ($username === 'admin') ? 'admin' : 'user';
         $password_hash = password_hash($password, PASSWORD_DEFAULT);
 
@@ -75,6 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
   }
 }
 ?>
+
+<?php /* ===================== HTML Rendering ===================== */ ?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -282,8 +293,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
   </style>
 </head>
 <body>
+<!-- Registration page wrapper with background and glass form card -->
 <div class="login">
-  <img src="../img/Bac.jpg" alt="login image" class="login__img">
+  <img src="../assets/img/Bac.jpg" alt="login image" class="login__img">
+  <!-- Signup form with server-side validation feedback -->
   <form action="register.php" method="post" class="login__form">
     <?php echo csrf_field(); ?>
     <h1 class="login__title">Register</h1>
@@ -327,6 +340,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
   </form>
 </div>
 
+<!-- Client-side password visibility helper -->
 <script>
 document.getElementById('show-password').addEventListener('change', function () {
   const pw = document.getElementById('login-pas');

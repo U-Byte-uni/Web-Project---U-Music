@@ -1,4 +1,10 @@
 <?php
+/**
+ * Login Controller
+ *
+ * Handles authentication, password verification/migration, and
+ * renders the login interface.
+ */
 session_start();
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/csrf.php';
@@ -8,6 +14,7 @@ $username_input = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
+  // Validate anti-CSRF token for credential submission.
   csrf_verify();
 
   $username_input = trim($_POST['username'] ?? '');
@@ -34,9 +41,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $is_hashed = $hash_info['algo'] !== 0;
         $is_valid = false;
 
+        // Primary path: verify modern password hashes.
         if ($is_hashed) {
           $is_valid = password_verify($password, $stored_pwd);
         } else {
+          // Legacy plaintext fallback with automatic one-time upgrade to hash.
           $is_valid = hash_equals($stored_pwd, $password);
 
           if ($is_valid) {
@@ -52,11 +61,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         if ($is_valid) {
+          // Refresh session ID and bind authenticated identity.
           session_regenerate_id(true);
           $_SESSION['user_id'] = $user['user_id'];
           $_SESSION['username'] = $user['username'];
           $_SESSION['role'] = $user['role'];
 
+          // Role-based redirect after successful authentication.
           if ($_SESSION['role'] === 'admin') {
             echo "<script>window.location.href='pages/manage.php';</script>";
           } else {
@@ -79,6 +90,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 }
 ?>
 
+<?php /* ===================== HTML Rendering ===================== */ ?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -297,9 +309,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <body>
 
+  <!-- Login layout wrapper with background image + form card -->
   <div class="login">
-    <img src="img/Bac.jpg" alt="login image" class="login__img" />
+    <img src="assets/img/Bac.jpg" alt="login image" class="login__img" />
 
+    <!-- Login form (username/password + CSRF token) -->
     <form method="post" class="login__form">
       <?php echo csrf_field(); ?>
       <h1 class="login__title">Login</h1>
@@ -337,6 +351,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </form>
   </div>
 
+  <!-- Small UX helper: toggle password visibility -->
   <script>
     document.getElementById("show-password").addEventListener("change", function () {
       const passwordInput = document.getElementById("login-pas");

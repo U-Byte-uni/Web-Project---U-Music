@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <style>
         @font-face {
             font-family: 'Lucy';
-            src: url("../fonts/Lucy.ttf") format('truetype');
+            src: url("../assets/fonts/Lucy.ttf") format('truetype');
             font-weight: normal;
             font-style: normal;
         }
@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         body {
             font-family: 'Poppins', sans-serif;
-            background: url(../img/Bac.jpg) center/cover no-repeat fixed;
+            background: url(../assets/img/Bac.jpg) center/cover no-repeat fixed;
             color: #fff;
             min-height: 100vh;
             display: flex;
@@ -259,7 +259,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             height: 100%;
             min-height: 400px;
             background-color: #fff;
-            background-image: url('../img/div.jpg');
+            background-image: url('../assets/img/div.jpg');
             /* Replace with your image */
             background-size: cover;
             background-position: center;
@@ -450,7 +450,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </ul>
             </div>
             <a href="/Project/pages/logout.php" class="logout-btn" title="Logout">
-                <img src="../img/logout.png" alt="Logout">
+                <img src="../assets/img/logout.png" alt="Logout">
             </a>
         </div>
 

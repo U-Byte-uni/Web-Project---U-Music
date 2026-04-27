@@ -16,12 +16,12 @@ session_start();
 
         @font-face {
             font-family: 'Lucy';
-            src: url("../fonts/Lucy.ttf") format('truetype');
+            src: url("../assets/fonts/Lucy.ttf") format('truetype');
         }
 
         @font-face {
             font-family: 'Transity';
-            src: url("../fonts/BeautifulDream.otf") format('opentype');
+            src: url("../assets/fonts/BeautifulDream.otf") format('opentype');
         }
 
         * {
@@ -32,7 +32,7 @@ session_start();
 
         body {
             font-family: "Poppins", sans-serif;
-            background: url(../img/Bac.jpg) center/cover no-repeat;
+            background: url(../assets/img/Bac.jpg) center/cover no-repeat;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
@@ -413,7 +413,7 @@ session_start();
 
             <div class="logout">
                 <a href="/Project/pages/logout.php" class="logout-btn" title="Logout">
-                    <img src="../img/logout.png" alt="Logout">
+                    <img src="../assets/img/logout.png" alt="Logout">
                 </a>
             </div>
         </div>
@@ -430,7 +430,7 @@ session_start();
             </div>
 
             <div class="home-image">
-                <img src="../img/h.jpg" alt="Home Image">
+                <img src="../assets/img/h.jpg" alt="Home Image">
             </div>
 
         </div>

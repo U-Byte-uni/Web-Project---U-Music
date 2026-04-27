@@ -21,11 +21,11 @@ if ($auth_error !== '') {
     @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap");
     @font-face {
         font-family: 'Transity';
-        src: url("../fonts/BeautifulDream.otf") format('opentype');
+        src: url("../assets/fonts/BeautifulDream.otf") format('opentype');
       }
     @font-face {
         font-family: 'Lucy';
-        src: url("../fonts/Lucy.ttf") format('truetype');
+        src: url("../assets/fonts/Lucy.ttf") format('truetype');
       }
 
 
@@ -108,7 +108,7 @@ if ($auth_error !== '') {
   <br>
   <div class="brand">U-Music</div>
   <p class="quote">"Your personalized music experience starts here".</p>
-  <img src="../img/Wel.jpeg" alt="U-Music Showcase" class="main-img" />
+  <img src="../assets/img/Wel.jpeg" alt="U-Music Showcase" class="main-img" />
   <a href="home.php" class="welcome__button">Get Started</a>
 </body>
 </html>

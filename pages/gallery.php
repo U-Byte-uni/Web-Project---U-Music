@@ -1,18 +1,25 @@
 <?php
+/**
+ * Gallery Controller
+ *
+ * Handles gallery rendering plus AJAX actions for history and favourites.
+ */
 session_start();
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/csrf.php';
 
+/** @var string $searchTerm Filter term used in song search. */
 $searchTerm = '';
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['search'])) {
   $searchTerm = trim($_GET['search']);
 }
 
-
+// Protect all state-changing requests before processing POST handlers.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   csrf_verify();
 }
 
+// Legacy history endpoint branch retained for current frontend compatibility.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['record_history'])) {
   if (isset($_SESSION['user_id'], $_POST['song_id'])) {
     $user_id = $_SESSION['user_id'];
@@ -35,6 +42,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['record_history'])) {
   }
   exit;
 }
+
+// Main POST API branch used by AJAX calls from the gallery UI.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   header('Content-Type: text/plain');
 
@@ -50,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
   }
 
-  # Favourite toggle
+  // Favourite toggle endpoint used by heart icon interactions.
   if (isset($_POST['song_id'], $_POST['action'], $_SESSION['user_id'])) {
     $user_id = $_SESSION['user_id'];
     $song_id = intval($_POST['song_id']);
@@ -75,7 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   exit("Invalid request");
 }
-# Favourite
+
+// Return favourite song IDs so the UI can highlight active hearts on load.
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && isset($_SESSION['user_id'])) {
   header('Content-Type: application/json');
 
@@ -92,6 +102,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
 
 ?>
 
+<?php /* ===================== HTML Rendering ===================== */ ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -107,12 +119,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
 
     @font-face {
       font-family: 'Lucy';
-      src: url("../fonts/Lucy.ttf") format('truetype');
+      src: url("../assets/fonts/Lucy.ttf") format('truetype');
     }
 
     @font-face {
       font-family: 'Transity';
-      src: url("../fonts/BeautifulDream.otf") format('opentype');
+      src: url("../assets/fonts/BeautifulDream.otf") format('opentype');
     }
 
     * {
@@ -123,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
 
     body {
       font-family: "Poppins", sans-serif;
-      background: url('../img/Bac.jpg') no-repeat center center fixed;
+      background: url('../assets/img/Bac.jpg') no-repeat center center fixed;
       background-size: cover;
       min-height: 100vh;
       color: #fff;
@@ -144,7 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
       bottom: 0;
       width: 80px;
       height: 100vh;
-      background: url('../img/Bac.jpg') no-repeat center center fixed;
+      background: url('../assets/img/Bac.jpg') no-repeat center center fixed;
       background-size: cover;
       backdrop-filter: blur(6px);
       transition: width 0.3s ease;
@@ -869,7 +881,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
 <body>
   <div class="main">
 
-    <!-- Sidebar -->
+    <!-- Sidebar: profile shortcut + quick actions for favourites/history -->
     <div class="sidebar collapsed" id="sidebar">
       <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">
         <i class="fas fa-angle-double-left" id="toggle-icon"></i>
@@ -892,6 +904,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
 
 
     <div class="content">
+      <!-- Top navigation area -->
       <div class="navbar">
         <button class="mobile-menu-btn" type="button" onclick="toggleSidebar()" aria-label="Toggle sidebar">
           <i class="fas fa-bars"></i>
@@ -913,16 +926,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
         </div>
         <div class="logout">
           <a href="/Project/pages/logout.php" class="logout-btn" title="Logout">
-            <img src="../img/logout.png" alt="Logout">
+            <img src="../assets/img/logout.png" alt="Logout">
           </a>
         </div>
       </div>
 
+      <!-- Main gallery content -->
       <div class="gallery-container">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
           <div style="flex: 1;"></div>
           <h2 class="gallery-title" style="margin-bottom: 0; flex: 1;">Gallery</h2>
           <div style="flex: 1; display: flex; justify-content: flex-end;">
+            <!-- Song search form -->
             <form method="GET" class="search-bar-container" style="margin: 0;">
               <input type="text" class="search-bar" name="search" placeholder="Search..."
                 value="<?php echo htmlspecialchars($_GET['search'] ?? '') ?>">
@@ -932,6 +947,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
         </div>
         <div class="gallery-grid">
           <?php
+          // Select filtered songs when a search term is present.
           if (!empty($searchTerm)) {
             $stmt = $mysqli->prepare("
                 SELECT song_id, s_name, path, artist, added_at 
@@ -948,24 +964,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
 
 
           if ($result && $result->num_rows > 0) {
+            // Render each song card with media controls and favourite actions.
             while ($row = $result->fetch_assoc()) {
               $song_id = (int) $row['song_id'];
               $song_name = htmlspecialchars($row['s_name']);
               $artist = htmlspecialchars($row['artist']);
               $audio_path = htmlspecialchars($row['path']);
               $audio_src = $audio_path;
+              // Normalize local file paths so <audio> source URLs remain valid.
               if (!preg_match('/^(https?:)?\\/\\//i', $audio_path)) {
-                if (strpos($audio_path, 'music/') === 0) {
+                if (strpos($audio_path, 'assets/music/') === 0) {
                   $audio_src = "../" . $audio_path;
+                } elseif (strpos($audio_path, 'music/') === 0) {
+                  $audio_src = "../assets/" . $audio_path;
                 } else {
-                  $audio_src = "../music/" . ltrim($audio_path, '/');
+                  $audio_src = "../assets/music/" . ltrim($audio_path, '/');
                 }
               }
 
-              $thumb_fs = __DIR__ . "/../img/song_thumbs/{$song_name}.jpg";
+              // Prefer song-specific thumbnail; fallback to default image.
+              $thumb_fs = __DIR__ . "/../assets/img/song_thumbs/{$song_name}.jpg";
               $image_path = file_exists($thumb_fs)
-                ? "../img/song_thumbs/{$song_name}.jpg"
-                : "../img/image.png";
+                ? "../assets/img/song_thumbs/{$song_name}.jpg"
+                : "../assets/img/image.png";
 
               echo <<<HTML
                     <div class="song-item">
@@ -1008,6 +1029,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
       </div>
 
 
+      <!-- Favourites view shown via sidebar -->
       <div id="favourites" class="sidebar-tab">
         <h2 class="section-title">Your Favourites</h2>
 
@@ -1045,6 +1067,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
         ?>
       </div>
 
+      <!-- Listening history view shown via sidebar -->
       <div id="history" class="sidebar-tab">
         <h2 class="section-title">History</h2>
 
@@ -1086,9 +1109,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
     </div>
   </div>
 
-  <!-- Scripts -->
+  <!-- Scripts: AJAX handlers + sidebar interactions -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+      // Reuse one CSRF token for every AJAX POST action in this page.
       const csrfToken = "<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>";
       const postForm = data =>
         fetch(location.href, {
@@ -1101,6 +1125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
         }).then(res => res.text());
 
       const setupAudioTracking = () => {
+        // Record one history row per playback cycle to avoid duplicates.
         document.querySelectorAll('audio').forEach(audio => {
           let recorded = false;
 
@@ -1120,6 +1145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
       };
 
       const loadFavourites = () => {
+        // Paint favourite hearts based on favourite_list endpoint.
         fetch('?favourite_list=1')
           .then(res => res.json())
           .then(favs => {
@@ -1130,6 +1156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
       };
 
       const setupFavouriteToggles = () => {
+        // Toggle add/remove favourite and update icon state immediately.
         document.querySelectorAll('.fav-icon').forEach(icon => {
           icon.addEventListener('click', () => {
             const songId = icon.dataset.songId;
@@ -1145,7 +1172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['favourite_list']) && is
         });
       };
 
-      // Initialize all features
+      // Initialize page behavior.
       setupAudioTracking();
       loadFavourites();
       setupFavouriteToggles();

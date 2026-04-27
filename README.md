@@ -16,9 +16,10 @@ A PHP-based music streaming and management website. This project allows users to
 - pages/: All PHP pages (Home, Gallery, About, Contact, Register, Manage, Wellcome, Profile, Logout).
 - includes/: Shared PHP includes (db.php, auth.php, csrf.php).
 - database/schema.sql: Contact form table schema.
-- img/: Images and UI assets (gallery/ and song_thumbs/).
-- music/: MP3 audio files.
-- uploads/: Reserved for future uploads.
+- assets/img/: Images and UI assets (gallery/ and song_thumbs/).
+- assets/music/: MP3 audio files.
+- assets/uploads/: Reserved for future uploads.
+- assets/fonts/: Custom fonts used by the UI.
 
 ## Prerequisites
 
@@ -82,52 +83,54 @@ Project/
 │   └── schema.sql
 ├── index.php
 ├── README.md
-├── fonts/
-│   ├── BeautifulDream.otf
-│   ├── BlackoutOldskull.ttf
-│   ├── Gafiya.otf
-│   ├── Lucy.ttf
-│   ├── Themunday.ttf
-│   └── Transcity.otf
-├── img/
-│   ├── Background.jpg
-│   ├── admin.jpg
-│   ├── div.jpg
-│   ├── h.jpg
-│   ├── image.png
-│   ├── logo.png
-│   ├── logout.png
-│   ├── man.jpg
-│   ├── gallery/
-│   │   └── 1.jpg
-│   └── song_thumbs/
-│       ├── Easy Travel.jpg
-│       ├── Flower Field.jpg
-│       ├── Funny Day.jpg
-│       ├── Funny Kids.jpg
-│       ├── Happy.jpg
-│       ├── Jazz Lounge.jpg
-│       ├── Morning Coffee.jpg
-│       ├── Soft Calm.jpg
-│       ├── The Inspiring Ambient.jpg
-│       ├── The Travel.jpg
-│       └── Visionary.jpg
+├── assets/
+│   ├── fonts/
+│   │   ├── BeautifulDream.otf
+│   │   ├── BlackoutOldskull.ttf
+│   │   ├── Gafiya.otf
+│   │   ├── Lucy.ttf
+│   │   ├── Themunday.ttf
+│   │   └── Transcity.otf
+│   ├── img/
+│   │   ├── Background.jpg
+│   │   ├── admin.jpg
+│   │   ├── div.jpg
+│   │   ├── h.jpg
+│   │   ├── image.png
+│   │   ├── logo.png
+│   │   ├── logout.png
+│   │   ├── man.jpg
+│   │   ├── gallery/
+│   │   │   └── 1.jpg
+│   │   └── song_thumbs/
+│   │       ├── Easy Travel.jpg
+│   │       ├── Flower Field.jpg
+│   │       ├── Funny Day.jpg
+│   │       ├── Funny Kids.jpg
+│   │       ├── Happy.jpg
+│   │       ├── Jazz Lounge.jpg
+│   │       ├── Morning Coffee.jpg
+│   │       ├── Soft Calm.jpg
+│   │       ├── The Inspiring Ambient.jpg
+│   │       ├── The Travel.jpg
+│   │       └── Visionary.jpg
+│   ├── music/
+│   │   ├── Easy Travel.mp3
+│   │   ├── Flower Field.mp3
+│   │   ├── Funny Day.mp3
+│   │   ├── Funny Kids.mp3
+│   │   ├── Happy.mp3
+│   │   ├── Jazz Lounge.mp3
+│   │   ├── Morning Coffee.mp3
+│   │   ├── Soft Calm.mp3
+│   │   ├── The Inspiring Ambient.mp3
+│   │   ├── The Travel.mp3
+│   │   └── Visionary.mp3
+│   └── uploads/
 ├── includes/
 │   ├── auth.php
 │   ├── csrf.php
 │   └── db.php
-├── music/
-│   ├── Easy Travel.mp3
-│   ├── Flower Field.mp3
-│   ├── Funny Day.mp3
-│   ├── Funny Kids.mp3
-│   ├── Happy.mp3
-│   ├── Jazz Lounge.mp3
-│   ├── Morning Coffee.mp3
-│   ├── Soft Calm.mp3
-│   ├── The Inspiring Ambient.mp3
-│   ├── The Travel.mp3
-│   └── Visionary.mp3
 ├── pages/
 │   ├── about.php
 │   ├── contact.php
@@ -138,5 +141,4 @@ Project/
 │   ├── profile.php
 │   ├── register.php
 │   └── wellcome.php
-└── uploads/
 ```

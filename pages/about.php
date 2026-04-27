@@ -15,7 +15,7 @@ session_start();
     <style>
         @font-face {
             font-family: 'Lucy';
-            src: url("../fonts/Lucy.ttf") format('truetype');
+            src: url("../assets/fonts/Lucy.ttf") format('truetype');
             font-weight: normal;
             font-style: normal;
         }
@@ -28,7 +28,7 @@ session_start();
 
         body {
             font-family: 'Poppins', sans-serif;
-            background: url(../img/Bac.jpg) center/cover no-repeat fixed;
+            background: url(../assets/img/Bac.jpg) center/cover no-repeat fixed;
             color: #fff;
             min-height: 100vh;
             display: flex;
@@ -165,7 +165,7 @@ session_start();
             width: 300px;
             height: 100%;
             min-height: 400px;
-            background-image: url('../img/man.jpg');
+            background-image: url('../assets/img/man.jpg');
             background-size: cover;
             background-position: center top;
             border-radius: 12px;
@@ -335,7 +335,7 @@ session_start();
                 </ul>
             </div>
             <a href="/Project/pages/logout.php" class="logout-btn" title="Logout">
-                <img src="../img/logout.png" alt="Logout">
+                <img src="../assets/img/logout.png" alt="Logout">
             </a>
         </div>
 
